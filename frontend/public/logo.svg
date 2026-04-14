@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <!-- Dark bg gradient -->
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0d1b2a"/>
+      <stop offset="100%" stop-color="#05101a"/>
+    </radialGradient>
+    <!-- Teal accent gradient -->
+    <linearGradient id="tealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5cc"/>
+      <stop offset="100%" stop-color="#0090ff"/>
+    </linearGradient>
+    <!-- T bar gradient -->
+    <linearGradient id="barGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00e5cc"/>
+      <stop offset="100%" stop-color="#00b4d8"/>
+    </linearGradient>
+    <!-- Glow filter -->
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="98" fill="url(#bgGrad)"/>
+
+  <!-- Outer ring -->
+  <circle cx="100" cy="100" r="86" fill="none" stroke="url(#tealGrad)" stroke-width="1.5" opacity="0.6"/>
+  <!-- Middle ring (dashed — scanning) -->
+  <circle cx="100" cy="100" r="72" fill="none" stroke="#00e5cc" stroke-width="1" opacity="0.2" stroke-dasharray="8 6"/>
+
+  <!-- The "T" — vertical stem -->
+  <rect x="91" y="52" width="18" height="90" rx="4" fill="url(#tealGrad)" filter="url(#glow)"/>
+  <!-- The "T" — horizontal bar -->
+  <rect x="56" y="52" width="88" height="18" rx="4" fill="url(#barGrad)" filter="url(#softGlow)"/>
+
+  <!-- Center dot — the "telos" (purpose/goal) -->
+  <circle cx="100" cy="97" r="10" fill="#0d1b2a" stroke="url(#tealGrad)" stroke-width="2"/>
+  <circle cx="100" cy="97" r="4" fill="url(#tealGrad)"/>
+
+  <!-- Crosshair accent lines -->
+  <line x1="100" y1="46" x2="100" y2="52" stroke="#00e5cc" stroke-width="2" opacity="0.5"/>
+  <line x1="100" y1="142" x2="100" y2="148" stroke="#00e5cc" stroke-width="2" opacity="0.5"/>
+  <line x1="152" y1="97" x2="156" y2="97" stroke="#00e5cc" stroke-width="2" opacity="0.5"/>
+  <line x1="44" y1="97" x2="48" y2="97" stroke="#00e5cc" stroke-width="2" opacity="0.5"/>
+
+  <!-- Corner accent marks -->
+  <line x1="62" y1="62" x2="68" y2="62" stroke="#00e5cc" stroke-width="1.5" opacity="0.4"/>
+  <line x1="62" y1="62" x2="62" y2="68" stroke="#00e5cc" stroke-width="1.5" opacity="0.4"/>
+  <line x1="138" y1="62" x2="132" y2="62" stroke="#00e5cc" stroke-width="1.5" opacity="0.4"/>
+  <line x1="138" y1="62" x2="138" y2="68" stroke="#00e5cc" stroke-width="1.5" opacity="0.4"/>
+  <line x1="62" y1="138" x2="68" y2="138" stroke="#00e5cc" stroke-width="1.5" opacity="0.4"/>
+  <line x1="62" y1="138" x2="62" y2="132" stroke="#00e5cc" stroke-width="1.5" opacity="0.4"/>
+  <line x1="138" y1="138" x2="132" y2="138" stroke="#00e5cc" stroke-width="1.5" opacity="0.4"/>
+  <line x1="138" y1="138" x2="138" y2="132" stroke="#00e5cc" stroke-width="1.5" opacity="0.4"/>
+</svg>

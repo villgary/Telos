@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL 16 ───────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: accountscan
+      POSTGRES_USER: accountscan
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U accountscan -d accountscan"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis 7 (future: Celery broker / session store) ────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── Backend API ──────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Database — use the service name so Docker networking resolves it
+      DATABASE_URL: postgresql://accountscan:${DB_PASSWORD}@db:5432/accountscan
+      DB_POOL_SIZE: "10"
+      DB_MAX_OVERFLOW: "20"
+      DB_POOL_RECYCLE: "3600"
+      DB_SSLMODE: "prefer"
+      # Security (generate: python -c "import secrets; print(secrets.token_hex(32))")
+      ACCOUNTSCAN_MASTER_KEY: ${ACCOUNTSCAN_MASTER_KEY:?ACCOUNTSCAN_MASTER_KEY is required}
+      ACCOUNTSCAN_JWT_SECRET: ${ACCOUNTSCAN_JWT_SECRET:?ACCOUNTSCAN_JWT_SECRET is required}
+      JWT_EXPIRE_MINUTES: "15"
+      REFRESH_TOKEN_EXPIRE_DAYS: "7"
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # Redis (future)
+      REDIS_URL: redis://redis:6379/0
+      PORT: "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── Frontend (nginx) ────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+
+volumes:
+  postgres_data:
