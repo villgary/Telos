@@ -65,6 +65,26 @@ _LEAK_SCAN_PATHS = [
     "/etc/ssh/ssh_config",
 ]
 
+# Only allow characters valid in Unix paths/usernames to prevent shell injection.
+# Paths: alphanumerics, underscore, hyphen, dot, forward-slash
+_SHELL_PATH_RE = re.compile(r"^[a-zA-Z0-9_.\-/]+$")
+# Usernames: alphanumerics, underscore, hyphen, dot (no slashes)
+_SHELL_USER_RE = re.compile(r"^[a-zA-Z0-9_.\-]+$")
+
+
+def _shell_safe_path(value: str) -> Optional[str]:
+    """Return value if safe for shell embedding, else None (skip dangerous value)."""
+    if value and _SHELL_PATH_RE.match(value):
+        return value
+    return None
+
+
+def _shell_safe_user(value: str) -> Optional[str]:
+    """Return value if safe for shell embedding as username, else None."""
+    if value and _SHELL_USER_RE.match(value):
+        return value
+    return None
+
 
 # ───────────────────────────────────────────────
 #  Dataclasses
@@ -229,12 +249,17 @@ def _audit_ssh_keys(client: SSHClient, homes: dict) -> dict:
     VALID_KEY_TYPES = {"ssh-rsa", "ssh-ed25519", "ecdsa-sha2-nistp256", "ssh-dss"}
 
     for uname, home in homes.items():
-        if not home or home in ("/nonexistent", "/var/lib/empty", "/sbin/nologin", "/usr/sbin/nologin", "/bin/false"):
+        safe_home = _shell_safe_path(home)
+        safe_uname = _shell_safe_user(uname)
+        if not safe_home or not safe_uname:
             continue
         result[uname] = {"keys": [], "warnings": [], "ca_config": None}
 
         for keyfile in (".ssh/authorized_keys", ".ssh/authorized_keys2"):
-            out, _, rc = _run_cmd(client, f"cat {home}/{keyfile} 2>/dev/null || true")
+            safe_keyfile = _shell_safe_path(keyfile)
+            if not safe_keyfile:
+                continue
+            out, _, rc = _run_cmd(client, f"cat {safe_home}/{safe_keyfile} 2>/dev/null || true")
             if rc != 0 or not out.strip():
                 continue
 
@@ -253,9 +278,14 @@ def _audit_ssh_keys(client: SSHClient, homes: dict) -> dict:
                 key_data = parts[1]
                 key_comment = parts[2] if len(parts) > 2 else ""
 
-                # Get real fingerprint via ssh-keygen
+                # Validate key_type against known types before using in shell
+                if key_type not in VALID_KEY_TYPES:
+                    result[uname]["warnings"].append(f"{keyfile}: 非标准密钥类型 '{key_type}'")
+
+                # Get real fingerprint via ssh-keygen (base64 data is safe — validated chars only)
+                safe_key_data = key_data.strip()
                 fp_out, _, fp_rc = _run_cmd(client,
-                    f"echo '{key_data}' | base64 -d 2>/dev/null | ssh-keygen -lf - 2>/dev/null || true")
+                    f"printf '%s' {safe_key_data} | base64 -d 2>/dev/null | ssh-keygen -lf - 2>/dev/null || true")
                 fingerprint = fp_out.split()[0] if fp_rc == 0 and fp_out else key_data[:30] + "..."
 
                 key_info = {
@@ -270,7 +300,7 @@ def _audit_ssh_keys(client: SSHClient, homes: dict) -> dict:
                 # Try to detect passphrase requirement via ssh-keygen -y (prompts for passphrase)
                 # Don't actually decrypt — just check if key is encrypted by trying to read it
                 key_bits_out, _, _ = _run_cmd(client,
-                    f"ssh-keygen -yf {home}/{keyfile} 2>&1 | head -1 || true")
+                    f"ssh-keygen -yf {safe_home}/{safe_keyfile} 2>&1 | head -1 || true")
                 if "encrypted" in key_bits_out.lower() or "passphrase" in key_bits_out.lower():
                     key_info["has_passphrase"] = False  # can't determine, key not accessible
                 elif key_bits_out:
@@ -417,7 +447,10 @@ def _scan_credential_files(client: SSHClient) -> List[CredentialFinding]:
         if rc != 0 or not out.strip():
             continue
         for path in out.strip().splitlines():
-            perms, owner, *_ = _run_cmd(client, f"stat -c '%a %U' '{path}' 2>/dev/null || echo ''")
+            safe_path = _shell_safe_path(path)
+            if not safe_path:
+                continue
+            perms, owner, *_ = _run_cmd(client, f"stat -c '%a %U' '{safe_path}' 2>/dev/null || echo ''")
             if not perms:
                 continue
             is_world_readable = any(p in perms for p in ["4", "6", "7"])  # r-- or rw- or rwx
@@ -441,7 +474,10 @@ def _scan_credential_files(client: SSHClient) -> List[CredentialFinding]:
         if rc != 0 or not out.strip():
             continue
         for path in out.strip().splitlines():
-            perms, owner, *_ = _run_cmd(client, f"stat -c '%a %U' '{path}' 2>/dev/null || echo ''")
+            safe_path = _shell_safe_path(path)
+            if not safe_path:
+                continue
+            perms, owner, *_ = _run_cmd(client, f"stat -c '%a %U' '{safe_path}' 2>/dev/null || echo ''")
             is_world = any(p in perms for p in ["4", "6", "7"])
             findings.append(CredentialFinding(
                 path=path,
@@ -460,7 +496,10 @@ def _scan_credential_files(client: SSHClient) -> List[CredentialFinding]:
         if rc != 0 or not out.strip():
             continue
         for path in out.strip().splitlines():
-            perms, owner, *_ = _run_cmd(client, f"stat -c '%a %U' '{path}' 2>/dev/null || echo ''")
+            safe_path = _shell_safe_path(path)
+            if not safe_path:
+                continue
+            perms, owner, *_ = _run_cmd(client, f"stat -c '%a %U' '{safe_path}' 2>/dev/null || echo ''")
             is_world = any(p in perms for p in ["4", "6", "7"])
             findings.append(CredentialFinding(
                 path=path,
@@ -591,7 +630,10 @@ def _get_admin_groups_for_distro(client: SSHClient, distro: str) -> Tuple[Set[st
             usernames.append(parts[0])
 
     for uname in usernames:
-        out, _, rc = _run_cmd(client, f"id -nG {uname} 2>/dev/null || true")
+        safe_uname = _shell_safe_user(uname)
+        if not safe_uname:
+            continue
+        out, _, rc = _run_cmd(client, f"id -nG {safe_uname} 2>/dev/null || true")
         if rc == 0 and out.strip():
             for gid_name in out.strip().split():
                 if gid_name in groups_to_check:

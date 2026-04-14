@@ -248,7 +248,7 @@ def _execute_scan(job_id: int) -> None:
 async def list_scan_jobs(
     asset_id: int = None,
     db: Session = Depends(get_db),
-    user: models.User = Depends(auth.get_current_user),
+    user: models.User = Depends(auth.require_role(models.UserRole.operator, models.UserRole.admin)),
 ):
     query = db.query(models.ScanJob).order_by(models.ScanJob.created_at.desc())
     if asset_id:
@@ -269,7 +269,7 @@ async def list_scan_jobs(
 async def get_scan_job(
     job_id: int,
     db: Session = Depends(get_db),
-    user: models.User = Depends(auth.get_current_user),
+    user: models.User = Depends(auth.require_role(models.UserRole.operator, models.UserRole.admin)),
 ):
     job = db.query(models.ScanJob).filter(models.ScanJob.id == job_id).first()
     if not job:

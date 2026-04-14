@@ -70,8 +70,7 @@ class PlaybookResponse(BaseModel):
     enabled: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True, "extra": "forbid"}
 
 
 class PlaybookExecutionResponse(BaseModel):
@@ -85,8 +84,7 @@ class PlaybookExecutionResponse(BaseModel):
     approved_by: int | None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True, "extra": "forbid"}
 
 
 class DryRunResult(BaseModel):

@@ -48,8 +48,7 @@ class PolicyResponse(BaseModel):
     is_built_in: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True, "extra": "forbid"}
 
 
 # ── Policy Evaluation (literal paths — must be registered BEFORE /{policy_id}) ──

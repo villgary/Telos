@@ -319,7 +319,6 @@ app.include_router(nhi.router)
 async def health_check():
     checks = {
         "database": "ok",
-        "encryption_key": "ok",
         "scheduler": "stopped",
     }
     status_overall = "ok"
@@ -334,14 +333,6 @@ async def health_check():
         checks["database"] = f"error: {e}"
         status_overall = "degraded"
 
-    # Encryption key (check via importing encryption)
-    try:
-        from backend import encryption as _enc
-        _ = _enc._aesgcm  # noqa: access module-level var to trigger load
-    except Exception as e:
-        checks["encryption_key"] = f"missing: {e}"
-        status_overall = "degraded"
-
     # Scheduler
     from backend.services.scheduler_service import SchedulerService
     if SchedulerService.get_instance().is_running:
@@ -351,7 +342,6 @@ async def health_check():
         "status": status_overall,
         "service": "accountscan",
         "version": "2.0.0",
-        "checks": checks,
     }
 
 

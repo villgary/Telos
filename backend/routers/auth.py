@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
@@ -11,14 +12,22 @@ from backend.middleware.rate_limit import limiter
 router = APIRouter(prefix="/api/v1/auth", tags=["认证"])
 
 
-def _issue_tokens(db: Session, user: models.User, ip: str):
-    """Create access token + refresh token, return both."""
+def _issue_tokens(db: Session, user: models.User, ip: str, family_id: str = None):
+    """Create access token + refresh token, return both.
+
+    If family_id is None (new login), a fresh family is created.
+    If family_id is provided (token rotation), the token belongs to the same family.
+    """
     access_token = auth.create_access_token(data={"sub": user.username})
-    refresh_token = auth._generate_refresh_token()
-    token_hash = auth._hash_token(refresh_token)
+    refresh_token_str = auth._generate_refresh_token()
+    token_hash = auth._hash_token(refresh_token_str)
+
+    if family_id is None:
+        family_id = secrets.token_urlsafe(24)
 
     rt = models.RefreshToken(
         token_hash=token_hash,
+        family_id=family_id,
         user_id=user.id,
         expires_at=datetime.now(timezone.utc) + timedelta(days=auth.REFRESH_TOKEN_EXPIRE_DAYS),
         ip_address=ip,
@@ -26,7 +35,16 @@ def _issue_tokens(db: Session, user: models.User, ip: str):
     db.add(rt)
     db.commit()
 
-    return access_token, refresh_token
+    return access_token, refresh_token_str
+
+
+def _revoke_token_family(db: Session, family_id: str):
+    """Revoke all tokens in a token family."""
+    db.query(models.RefreshToken).filter(
+        models.RefreshToken.family_id == family_id,
+        models.RefreshToken.revoked == False,  # noqa: E712
+    ).update({"revoked": True})
+    db.commit()
 
 
 @router.post("/login", response_model=schemas.TokenResponse)
@@ -89,7 +107,7 @@ async def refresh_token(
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="用户不存在或已禁用")
 
-    # Rotate: revoke old token and issue new one
+    # Rotate: revoke old token and issue new one (same family)
     rt.revoked = True
     client_ip = auth.get_client_ip(request)
 
@@ -105,7 +123,7 @@ async def refresh_token(
             token_id=rt.id,
         )
 
-    new_access_token, new_refresh_token = _issue_tokens(db, user, client_ip)
+    new_access_token, new_refresh_token = _issue_tokens(db, user, client_ip, family_id=rt.family_id)
 
     return schemas.RefreshResponse(
         access_token=new_access_token,

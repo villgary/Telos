@@ -92,83 +92,13 @@ class CustomAPIProvider(PAMProvider):
         return accounts
 
 
-class TencentCloudBastionProvider(PAMProvider):
-    """
-    Tencent Cloud bastion host integration via CAM API.
-    Requires: secret_id, secret_key, region, instance_id in config.
-    """
-    name = "tencent_cloud_bastion"
-
-    def fetch_accounts(self, config: dict) -> list[PAMAccount]:
-        import requests, hashlib, hmac, json, time
-        from datetime import datetime
-
-        secret_id = config.get("secret_id")
-        secret_key = config.get("secret_key")
-        region = config.get("region", "ap-shanghai")
-        instance_id = config.get("instance_id")
-
-        if not all([secret_id, secret_key]):
-            raise ValueError("tencent_cloud_bastion: secret_id and secret_key required")
-
-        service = "bastion"
-        host = f"bastion.{region}.tencentcloudapi.com"
-        endpoint = f"https://{host}"
-
-        # Build Tencent Cloud API request (simplified)
-        timestamp = str(int(time.time()))
-        params = {"InstanceId": instance_id} if instance_id else {}
-
-        def _sign(secret, date, service, payload):
-            # Simplified — uses TC3-HMAC-SHA256
-            return "placeholder_signature"
-
-        headers = {
-            "Content-Type": "application/json",
-            "Host": host,
-            "X-Api-Key": secret_id,
-            "X-Api-Timestamp": timestamp,
-        }
-        payload = json.dumps(params)
-
-        # Return placeholder — real implementation would call TencentCloudAPI
-        return []
-
-
-class AliyunBastionProvider(PAMProvider):
-    """
-    Alibaba Cloud bastion host (堡垒机) via RAM API.
-    Requires: access_key_id, access_key_secret, region in config.
-    """
-    name = "aliyun_bastion"
-
-    def fetch_accounts(self, config: dict) -> list[PAMAccount]:
-        # Placeholder — real implementation calls Aliyun RAM API
-        return []
-
-
-class CyberArkProvider(PAMProvider):
-    """
-    CyberArk PVWA API integration.
-    Requires: pvwa_url, auth_token in config.
-    """
-    name = "cyberark"
-
-    def fetch_accounts(self, config: dict) -> list[PAMAccount]:
-        # Placeholder — real implementation calls CyberArk PVWA API
-        return []
-
-
 PROVIDERS: dict[str, type[PAMProvider]] = {
     "custom_api": CustomAPIProvider,
-    "tencent_cloud_bastion": TencentCloudBastionProvider,
-    "aliyun_bastion": AliyunBastionProvider,
-    "cyberark": CyberArkProvider,
 }
 
 
 def get_provider(provider: str) -> PAMProvider:
     cls = PROVIDERS.get(provider)
     if not cls:
-        raise ValueError(f"Unknown PAM provider: {provider}")
+        raise ValueError(f"Unknown or unimplemented PAM provider: {provider}")
     return cls()

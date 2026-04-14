@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -77,13 +77,12 @@ class AssetAccountSummary(BaseModel):
     snapshot_time: Optional[datetime] = None
     is_baseline: bool = False
     owner_identity_id: Optional[int] = None
-    owner_email: Optional[str] = None
-    owner_name: Optional[str] = None
+    owner_email: Optional[str] = Field(None, max_length=128)
+    owner_name: Optional[str] = Field(None, max_length=128)
     has_credential_findings: bool = False
     has_nopasswd_sudo: bool = False
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True, "extra": "forbid"}
 
 
 @router.get("/by-asset/{asset_id}/accounts", response_model=List[AssetAccountSummary])

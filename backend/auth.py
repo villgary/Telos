@@ -1,5 +1,4 @@
 import os
-import re
 import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -56,25 +55,12 @@ def _generate_refresh_token() -> str:
     return secrets.token_urlsafe(48)  # ~64-char URL-safe token
 
 
-# Special chars pattern: hyphen at end so it can't form a range with preceding char
-_PASSWORD_SPECIAL_PATTERN = r"[!@#$%^&*(),.?\":{}|<>_+\-/\[\] ]"
-
-
 def validate_password_strength(password: str) -> None:
-    """Raise ValueError if password doesn't meet strength requirements."""
-    errors = []
-    if len(password) < 8:
-        errors.append("至少8个字符")
-    if not re.search(r"[A-Z]", password):
-        errors.append("至少包含一个大写字母")
-    if not re.search(r"[a-z]", password):
-        errors.append("至少包含一个小写字母")
-    if not re.search(r"\d", password):
-        errors.append("至少包含一个数字")
-    if not re.search(_PASSWORD_SPECIAL_PATTERN, password):
-        errors.append("至少包含一个特殊字符")
-    if errors:
-        raise ValueError("密码不符合安全要求: " + "; ".join(errors))
+    """Raise ValueError if password doesn't meet strength requirements.
+
+    Delegates to schemas._check_password_strength (single source of truth).
+    """
+    schemas._check_password_strength(password)
 
 
 def get_client_ip(request: Request) -> str:
@@ -132,9 +118,15 @@ def require_admin(user: models.User = Depends(get_current_user)) -> models.User:
 def seed_default_user(db: Session):
     """Create default admin if no users exist."""
     if db.query(models.User).count() == 0:
+        admin_password = os.getenv("ACCOUNTSCAN_ADMIN_PASSWORD")
+        if not admin_password:
+            raise RuntimeError(
+                "ACCOUNTSCAN_ADMIN_PASSWORD environment variable is not set. "
+                "Generate one: python -c \"import secrets; print(secrets.token_urlsafe(24))\""
+            )
         admin = models.User(
             username="admin",
-            password_hash=hash_password("Admin123!"),  # Force change on first login
+            password_hash=hash_password(admin_password),
             role=models.UserRole.admin,
             email="admin@example.com",
             is_password_changed=False,

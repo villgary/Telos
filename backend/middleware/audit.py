@@ -22,21 +22,36 @@ from backend.auth import get_current_user
 from backend.logging_config import get_trace_id
 
 
-# Sensitive fields to redact from request body in audit logs
-_SENSITIVE_FIELDS: Set[str] = {
-    "password", "password_enc", "private_key_enc",
-    "passphrase_enc", "password_hash", "secret",
-    "token", "access_token", "refresh_token",
+# Sensitive fields to redact from request body in audit logs.
+# Uses case-insensitive substring matching to catch variants like
+# "password", "Password", "PASSWORD", "password_hash", "old_password", etc.
+_SENSITIVE_FIELD_PATTERNS: Set[str] = {
+    "password", "passphrase", "secret", "token", "private_key",
+    "access_token", "refresh_token", "api_key", "secret_key",
+    "credential", "auth_key",
 }
+
+# IPv4 / IPv6 regex for basic format validation
+_IP_RE = re.compile(
+    r"^("
+    r"(\d{1,3}\.){3}\d{1,3}"                        # IPv4
+    r"|([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}"     # IPv6 (abbreviated)
+    r")$"
+)
 
 
 def _sanitize_body(body: Optional[dict]) -> Optional[dict]:
-    """Remove sensitive fields from a request body dict before logging."""
+    """Remove sensitive fields from a request body dict before logging.
+
+    Uses case-insensitive substring matching to catch variants like
+    'password', 'my_password', 'PASSWORD', 'password_hash', etc.
+    """
     if not body:
         return None
     sanitized = {}
     for k, v in body.items():
-        if k.lower() in _SENSITIVE_FIELDS:
+        key_lower = k.lower()
+        if any(pat in key_lower for pat in _SENSITIVE_FIELD_PATTERNS):
             sanitized[k] = "[REDACTED]"
         elif isinstance(v, dict):
             sanitized[k] = _sanitize_body(v)
@@ -76,6 +91,9 @@ def audit_log(action: str, target_type: Optional[str] = None):
                                                  request.client.host if request.client else "unknown")
                 if "," in client_ip:
                     client_ip = client_ip.split(",")[0].strip()
+                # Validate IP format; discard malformed values
+                if not _IP_RE.match(client_ip):
+                    client_ip = None
 
                 # Extract target_id from result (if response model has id)
                 target_id: Optional[int] = None

@@ -426,14 +426,20 @@ def _parse_value_from_path(path: str) -> dict:
 
 # ── Evaluator ─────────────────────────────────────────────────────────────────
 
-def evaluate_rule(rule: dict, input_data: dict) -> tuple[bool, str]:
+# Maximum recursion depth for policy evaluation to prevent DoS via deeply nested policies
+_MAX_EVAL_DEPTH = 20
+
+
+def evaluate_rule(rule: dict, input_data: dict, _depth: int = 0) -> tuple[bool, str]:
     """Evaluate a parsed rule against input_data. Returns (passed, message)."""
+    if _depth > _MAX_EVAL_DEPTH:
+        return False, f"policy evaluation exceeded max depth ({_MAX_EVAL_DEPTH})"
     conditions = rule.get("conditions", [])
     msgs: list[str] = []
 
     # AND all conditions
     for cond in conditions:
-        result, msg = _eval_cond(cond, input_data)
+        result, msg = _eval_cond(cond, input_data, _depth + 1)
         if rule["type"] == "deny":
             # deny: violation when condition evaluates to True
             if result:
@@ -449,8 +455,10 @@ def evaluate_rule(rule: dict, input_data: dict) -> tuple[bool, str]:
         return True, "allowed"
 
 
-def _eval_cond(cond: dict, input_data: dict) -> tuple[bool, str]:
+def _eval_cond(cond: dict, input_data: dict, _depth: int = 0) -> tuple[bool, str]:
     """Evaluate a single condition. Returns (passed, message)."""
+    if _depth > _MAX_EVAL_DEPTH:
+        return False, f"condition evaluation exceeded max depth ({_MAX_EVAL_DEPTH})"
     ctype = cond.get("type")
 
     if ctype == "compare":
@@ -526,7 +534,7 @@ def _eval_cond(cond: dict, input_data: dict) -> tuple[bool, str]:
         return cond["value"], ""
 
     elif ctype == "not":
-        inner_passed, inner_msg = _eval_cond(cond["inner"], input_data)
+        inner_passed, inner_msg = _eval_cond(cond["inner"], input_data, _depth + 1)
         return not inner_passed, f"not ({inner_msg})"
 
     return True, ""
@@ -535,6 +543,8 @@ def _eval_cond(cond: dict, input_data: dict) -> tuple[bool, str]:
 def _get_field(input_data: dict, path: str) -> RegoValue:
     """Get a nested field from input_data following path 'a.b.c'."""
     parts = path.split(".")
+    if len(parts) > _MAX_EVAL_DEPTH:
+        return RegoValue(None)
     cur = input_data
     for p in parts:
         if cur is None:
