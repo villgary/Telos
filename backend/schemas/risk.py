@@ -1,9 +1,10 @@
 """Risk assessment Pydantic schemas."""
+from __future__ import annotations
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field
 
-from backend.models._enums import AssetCategory
+from backend.schemas.assets import AssetSummary
 
 
 class RiskFactorItem(BaseModel):
