@@ -86,6 +86,23 @@ def _execute_scan(job_id: int) -> None:
                     password=password,
                     timeout=120,
                 )
+            elif asset.asset_category == AssetCategory.directory:
+                from backend.services import ldap_scanner
+                from backend.models._enums import DirectoryType
+                directory_type = getattr(asset, 'directory_type', DirectoryType.active_directory)
+                dir_type_value = directory_type.value if hasattr(directory_type, 'value') else str(directory_type)
+                use_ssl = getattr(asset, 'use_ssl', True)
+                base_dn = getattr(asset, 'base_dn', None)
+                conn_result, accounts = ldap_scanner.scan_asset(
+                    ip=asset.ip,
+                    port=asset.port or (636 if use_ssl else 389),
+                    username=cred.username,
+                    password=password,
+                    directory_type=dir_type_value,
+                    use_ssl=use_ssl,
+                    base_dn=base_dn,
+                    timeout=120,
+                )
             elif asset.os_type == OSType.linux:
                 # Try Go scanner first if GO_SCANNER_URL is configured
                 go_used = False

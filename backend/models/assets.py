@@ -9,7 +9,7 @@ from sqlalchemy.orm import relationship, backref
 from backend.models._db import Base
 from backend.models._enums import (
     AssetCategory, OSType, DBType, NetworkVendor, IoTType,
-    AuthType, AssetStatus, AssetRelationType,
+    AuthType, AssetStatus, AssetRelationType, DirectoryType,
 )
 
 
@@ -74,6 +74,9 @@ class Asset(Base):
     db_type = Column(Enum(DBType), nullable=True)
     network_type = Column(Enum(NetworkVendor), nullable=True)
     iot_type = Column(Enum(IoTType), nullable=True)
+    directory_type = Column(Enum(DirectoryType), nullable=True)
+    base_dn = Column(String(256), nullable=True)
+    use_ssl = Column(Boolean, default=True, nullable=False)
     group_id = Column(Integer, ForeignKey("asset_groups.id"), nullable=True)
     port = Column(Integer, default=22)
     asset_category_def_id = Column(Integer, ForeignKey("asset_category_defs.id"), nullable=True)

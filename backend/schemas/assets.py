@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, List, Any, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
-from backend.models._enums import AssetCategory, OSType, DBType, NetworkVendor, IoTType, AssetRelationType, AssetStatus
+from backend.models._enums import AssetCategory, OSType, DBType, NetworkVendor, IoTType, AssetRelationType, AssetStatus, DirectoryType
 
 if TYPE_CHECKING:
     from backend.schemas.assets import AssetSummary
@@ -83,6 +83,9 @@ class AssetBase(BaseModel):
     db_type: Optional[DBType] = None
     network_type: Optional[NetworkVendor] = None
     iot_type: Optional[IoTType] = None
+    directory_type: Optional[DirectoryType] = None
+    base_dn: Optional[str] = Field(None, max_length=256)
+    use_ssl: bool = True
     group_id: Optional[int] = None
     port: int = 22
     credential_id: int
@@ -102,6 +105,9 @@ class AssetUpdate(BaseModel):
     db_type: Optional[DBType] = None
     network_type: Optional[NetworkVendor] = None
     iot_type: Optional[IoTType] = None
+    directory_type: Optional[DirectoryType] = None
+    base_dn: Optional[str] = Field(None, max_length=256)
+    use_ssl: Optional[bool] = None
     group_id: Optional[int] = None
     port: Optional[int] = None
     credential_id: Optional[int] = None
@@ -119,6 +125,9 @@ class AssetResponse(BaseModel):
     db_type: Optional[DBType]
     network_type: Optional[NetworkVendor]
     iot_type: Optional[IoTType]
+    directory_type: Optional[DirectoryType]
+    base_dn: Optional[str]
+    use_ssl: bool
     group_id: Optional[int]
     port: int
     status: AssetStatus

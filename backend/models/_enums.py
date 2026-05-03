@@ -18,6 +18,7 @@ class SubTypeKind(str, enum.Enum):
     database = "database"
     network = "network"
     iot = "iot"
+    directory = "directory"
 
 
 class AssetCategory(str, enum.Enum):
@@ -25,6 +26,7 @@ class AssetCategory(str, enum.Enum):
     database = "database"
     network = "network"
     iot = "iot"
+    directory = "directory"
 
 
 class OSType(str, enum.Enum):
@@ -46,6 +48,13 @@ class NetworkVendor(str, enum.Enum):
     h3c = "h3c"
     huawei = "huawei"
     generic = "generic"
+
+
+class DirectoryType(str, enum.Enum):
+    active_directory = "active_directory"
+    openldap = "openldap"
+    ds389 = "389ds"
+    custom = "custom"
 
 
 class IoTType(str, enum.Enum):
