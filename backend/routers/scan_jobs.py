@@ -67,16 +67,30 @@ def _execute_scan(job_id: int) -> None:
                     timeout=120,
                 )
             elif asset.asset_category == AssetCategory.network:
-                from backend.services import net_scanner
-                conn_result, accounts = net_scanner.scan_asset(
-                    ip=asset.ip,
-                    port=asset.port,
-                    username=cred.username,
-                    password=password,
-                    private_key=private_key,
-                    passphrase=passphrase,
-                    timeout=120,
-                )
+                network_vendor = asset.network_type.value if asset.network_type else "generic"
+                if os.environ.get("USE_NAPALM_SCANNER"):
+                    from backend.services import napalm_scanner
+                    conn_result, accounts = napalm_scanner.scan_asset(
+                        ip=asset.ip,
+                        port=asset.port,
+                        username=cred.username,
+                        password=password,
+                        private_key=private_key,
+                        passphrase=passphrase,
+                        vendor=network_vendor,
+                        timeout=120,
+                    )
+                else:
+                    from backend.services import net_scanner
+                    conn_result, accounts = net_scanner.scan_asset(
+                        ip=asset.ip,
+                        port=asset.port,
+                        username=cred.username,
+                        password=password,
+                        private_key=private_key,
+                        passphrase=passphrase,
+                        timeout=120,
+                    )
             elif asset.asset_category == AssetCategory.iot:
                 from backend.services import iot_scanner
                 conn_result, accounts = iot_scanner.scan_asset(
