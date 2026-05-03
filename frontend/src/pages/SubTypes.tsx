@@ -17,7 +17,7 @@ interface SubTypeDef {
   slug: string
   name: string
   description?: string
-  sub_type_kind: 'network' | 'iot' | 'database' | 'os'
+  sub_type_kind: 'network' | 'iot' | 'database' | 'os' | 'cloud'
   icon?: string
   color?: string
   sort_order: number
