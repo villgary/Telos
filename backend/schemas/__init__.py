@@ -22,6 +22,7 @@ from backend.schemas.credentials import (
 from backend.schemas.assets import (
     AssetCategoryDefCreate, AssetCategoryDefUpdate, AssetCategoryDefResponse,
     AssetCategoryTreeResponse,
+    SubTypeDefCreate, SubTypeDefUpdate, SubTypeDefResponse,
     AssetGroupCreate, AssetGroupUpdate, AssetGroupResponse,
     AssetBase, AssetCreate, AssetUpdate, AssetResponse,
     AssetRelationshipCreate, AssetRelationshipUpdate,
