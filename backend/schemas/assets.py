@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, List, Any, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
-from backend.models._enums import AssetCategory, OSType, DBType, NetworkVendor, IoTType, AssetRelationType, AssetStatus, DirectoryType
+from backend.models._enums import AssetCategory, OSType, DBType, NetworkVendor, IoTType, AssetRelationType, AssetStatus, DirectoryType, CloudProviderType
 
 if TYPE_CHECKING:
     from backend.schemas.assets import AssetSummary
@@ -84,6 +84,8 @@ class AssetBase(BaseModel):
     network_type: Optional[NetworkVendor] = None
     iot_type: Optional[IoTType] = None
     directory_type: Optional[DirectoryType] = None
+    cloud_provider_type: Optional[CloudProviderType] = None
+    cloud_region: Optional[str] = Field(None, max_length=32)
     base_dn: Optional[str] = Field(None, max_length=256)
     use_ssl: bool = True
     group_id: Optional[int] = None
@@ -106,6 +108,8 @@ class AssetUpdate(BaseModel):
     network_type: Optional[NetworkVendor] = None
     iot_type: Optional[IoTType] = None
     directory_type: Optional[DirectoryType] = None
+    cloud_provider_type: Optional[CloudProviderType] = None
+    cloud_region: Optional[str] = Field(None, max_length=32)
     base_dn: Optional[str] = Field(None, max_length=256)
     use_ssl: Optional[bool] = None
     group_id: Optional[int] = None
@@ -126,6 +130,8 @@ class AssetResponse(BaseModel):
     network_type: Optional[NetworkVendor]
     iot_type: Optional[IoTType]
     directory_type: Optional[DirectoryType]
+    cloud_provider_type: Optional[CloudProviderType]
+    cloud_region: Optional[str]
     base_dn: Optional[str]
     use_ssl: bool
     group_id: Optional[int]

@@ -19,6 +19,7 @@ class SubTypeKind(str, enum.Enum):
     network = "network"
     iot = "iot"
     directory = "directory"
+    cloud = "cloud"
 
 
 class AssetCategory(str, enum.Enum):
@@ -27,6 +28,7 @@ class AssetCategory(str, enum.Enum):
     network = "network"
     iot = "iot"
     directory = "directory"
+    cloud = "cloud"
 
 
 class OSType(str, enum.Enum):
@@ -73,6 +75,11 @@ class LLMProvider(str, enum.Enum):
     minimax = "minimax"
     deepseek = "deepseek"
     zhipu = "zhipu"
+
+
+class CloudProviderType(str, enum.Enum):
+    aws = "aws"
+    azure = "azure"
 
 
 class AssetRelationType(str, enum.Enum):

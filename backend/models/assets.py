@@ -10,6 +10,7 @@ from backend.models._db import Base
 from backend.models._enums import (
     AssetCategory, OSType, DBType, NetworkVendor, IoTType,
     AuthType, AssetStatus, AssetRelationType, DirectoryType,
+    CloudProviderType,
 )
 
 
@@ -75,6 +76,8 @@ class Asset(Base):
     network_type = Column(Enum(NetworkVendor), nullable=True)
     iot_type = Column(Enum(IoTType), nullable=True)
     directory_type = Column(Enum(DirectoryType), nullable=True)
+    cloud_provider_type = Column(Enum(CloudProviderType), nullable=True)
+    cloud_region = Column(String(32), nullable=True)
     base_dn = Column(String(256), nullable=True)
     use_ssl = Column(Boolean, default=True, nullable=False)
     group_id = Column(Integer, ForeignKey("asset_groups.id"), nullable=True)

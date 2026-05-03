@@ -7,8 +7,9 @@ from sqlalchemy import text
 from backend.database import get_db
 from backend import models, schemas, auth, encryption
 from backend.models import AccountRiskScore
-from backend.models import ScanJobStatus, AssetStatus, OSType, AssetCategory, DBType
+from backend.models import ScanJobStatus, AssetStatus, OSType, AssetCategory, DBType, CloudProviderType
 from backend.services import ssh_scanner, win_scanner, alert_service
+from backend.services.ssh_scanner import ConnectionResult
 from backend.services.risk_propagation import propagate_risk
 from backend.services.diff_engine import compute_diff
 from backend.services.account_lifecycle import compute_lifecycles
@@ -117,6 +118,38 @@ def _execute_scan(job_id: int) -> None:
                     base_dn=base_dn,
                     timeout=120,
                 )
+            elif asset.asset_category == AssetCategory.cloud:
+                from backend.models._enums import CloudProviderType
+                cloud_type = getattr(asset, 'cloud_provider_type', CloudProviderType.aws)
+                cloud_region = getattr(asset, 'cloud_region', 'us-east-1')
+                category_slug = getattr(asset, 'category_slug', None)
+                if cloud_type == CloudProviderType.aws:
+                    from backend.services import aws_iam_scanner
+                    # ip field holds AWS account ID for identification
+                    aws_account_id = category_slug or asset.ip
+                    conn_result, accounts = aws_iam_scanner.scan_asset(
+                        ip=aws_account_id,
+                        port=443,
+                        username=cred.username,
+                        password=password,
+                        region=cloud_region,
+                        timeout=120,
+                    )
+                elif cloud_type == CloudProviderType.azure:
+                    from backend.services import azure_ad_scanner
+                    # category_slug holds tenant_id for Azure
+                    tenant_id = category_slug or asset.ip
+                    conn_result, accounts = azure_ad_scanner.scan_asset(
+                        ip=tenant_id,
+                        port=443,
+                        username=cred.username,
+                        password=password,
+                        tenant_id=tenant_id,
+                        timeout=120,
+                    )
+                else:
+                    conn_result = ConnectionResult(success=False, error=f"Unsupported cloud provider: {cloud_type}", status="offline")
+                    accounts = []
             elif asset.os_type == OSType.linux:
                 # Try Go scanner first if GO_SCANNER_URL is configured
                 go_used = False
