@@ -39,6 +39,7 @@ from backend.models.auth import User, RefreshToken, AuditLog
 # ── Asset models ──────────────────────────────────────────────────────
 from backend.models.assets import (
     AssetCategoryDef,
+    SubTypeDef,
     Credential,
     AssetGroup,
     Asset,
