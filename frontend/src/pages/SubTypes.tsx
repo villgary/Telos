@@ -28,6 +28,7 @@ const KIND_LABELS: Record<string, string> = {
   iot: 'IoT Device Types',
   database: 'Database Types',
   os: 'OS Types',
+  cloud: 'Cloud Providers',
 }
 
 const KIND_COLORS: Record<string, string> = {
@@ -35,6 +36,7 @@ const KIND_COLORS: Record<string, string> = {
   iot: 'green',
   database: 'purple',
   os: 'orange',
+  cloud: 'cyan',
 }
 
 export default function SubTypes() {
@@ -169,6 +171,7 @@ export default function SubTypes() {
     iot: subTypes.filter(s => s.sub_type_kind === 'iot'),
     database: subTypes.filter(s => s.sub_type_kind === 'database'),
     os: subTypes.filter(s => s.sub_type_kind === 'os'),
+    cloud: subTypes.filter(s => s.sub_type_kind === 'cloud'),
   }
 
   return (
@@ -189,7 +192,7 @@ export default function SubTypes() {
         <Card><Text type="secondary">Loading...</Text></Card>
       ) : (
         <Row gutter={16}>
-          {(['network', 'iot', 'database', 'os'] as const).map(kind => (
+          {(['network', 'iot', 'database', 'os', 'cloud'] as const).map(kind => (
             <Col span={6} key={kind}>
               <Card
                 title={<Tag color={KIND_COLORS[kind]}>{KIND_LABELS[kind]}</Tag>}
@@ -258,6 +261,7 @@ export default function SubTypes() {
               <Option value="iot">IoT Device Type</Option>
               <Option value="database">Database Type</Option>
               <Option value="os">OS Type</Option>
+              <Option value="cloud">Cloud Provider</Option>
             </Select>
           </Form.Item>
 
