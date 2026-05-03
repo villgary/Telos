@@ -14,6 +14,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Literal
 
+from backend.models._enums import LifecycleStatus
 from backend.services.threat_graph import ThreatGraph, ThreatNode
 
 Lang = Literal["zh", "en"]
@@ -128,7 +129,7 @@ def _find_sunk_cost(graph: ThreatGraph, lang: Lang) -> list[dict]:
     }
 
     for nid, node in graph.nodes.items():
-        if node.lifecycle not in ('dormant', 'departed', 'unknown'):
+        if node.lifecycle not in (LifecycleStatus.dormant.value, LifecycleStatus.departed.value, LifecycleStatus.unknown.value):
             continue
         if not node.is_privileged():
             continue

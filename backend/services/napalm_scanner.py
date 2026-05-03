@@ -44,7 +44,7 @@ def _get_driver(vendor: str):
 
 
 def _map_vendor_to_napalm(vendor: str) -> str:
-    """Map our NetworkVendor enum to NAPALM driver name."""
+    """Map network vendor slug to NAPALM driver name."""
     mapping = {
         "cisco": "cisco_ios",
         "cisco_nxos": "cisco_nxos",

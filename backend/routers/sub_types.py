@@ -4,6 +4,7 @@ from typing import Optional, List
 
 from backend.database import get_db
 from backend import models, schemas, auth
+from backend.models import SubTypeKind
 
 router = APIRouter(prefix="/api/v1/sub-types", tags=["子类型管理"])
 
@@ -48,9 +49,6 @@ async def create_sub_type(
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"子类型 slug '{st_in.slug}' 已存在")
-
-    if st_in.sub_type_kind not in ('network', 'iot', 'database', 'os'):
-        raise HTTPException(status_code=400, detail="sub_type_kind 必须是 network, iot, database, 或 os 之一")
 
     st = models.SubTypeDef(
         slug=st_in.slug,

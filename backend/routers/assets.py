@@ -9,7 +9,7 @@ import io
 
 from backend.database import get_db
 from backend import models, schemas, auth, encryption
-from backend.models import AssetCategory, OSType, DBType, NetworkVendor, IoTType
+from backend.models import AssetCategory
 from backend.services import ssh_scanner, win_scanner
 from backend import schemas as S
 
@@ -149,9 +149,9 @@ async def export_assets_csv(
         "最后扫描", "创建时间",
     ])
     for a in assets:
-        sub_type = (a.db_type.value if a.db_type else
-                    a.network_type.value if a.network_type else
-                    a.os_type.value if a.os_type else "")
+        sub_type = (a.db_type if a.db_type else
+                    a.network_type if a.network_type else
+                    a.os_type if a.os_type else "")
         writer.writerow([
             a.ip,
             a.hostname or "",
@@ -238,7 +238,6 @@ async def create_asset(
         "network":   (AssetCategory.network,  "network_type"),
         "iot":       (AssetCategory.iot,     "iot_type"),
     }
-    _SUBKIND_TO_ENUM = {"os": OSType, "database": DBType, "network": NetworkVendor, "iot": IoTType}
 
     final_cat_def_id = asset_in.asset_category_def_id
     final_cat_slug = asset_in.category_slug
@@ -281,20 +280,18 @@ async def create_asset(
             _parent_slug = (parent.slug.lower() if parent else "") if cat_def and cat_def.parent_id else ""
             if _parent_slug == "database":
                 final_asset_category = AssetCategory.database
-                for _db_member in DBType:
-                    if _db_member.value == _slug_lower:
-                        final_db_type = _db_member
-                        break
+                if _slug_lower in ("mysql", "postgresql", "redis", "mongodb", "mssql", "oracle"):
+                    final_db_type = _slug_lower
             elif _parent_slug == "network":
                 final_asset_category = AssetCategory.network
             elif _parent_slug == "iot":
                 final_asset_category = AssetCategory.iot
             elif "linux" in _slug_lower or "ubuntu" in _slug_lower or _parent_slug == "linux":
                 final_asset_category = AssetCategory.server
-                final_os_type = OSType.linux
+                final_os_type = "linux"
             elif "windows" in _slug_lower or _parent_slug == "windows":
                 final_asset_category = AssetCategory.server
-                final_os_type = OSType.windows
+                final_os_type = "windows"
             else:
                 final_asset_category = AssetCategory.server
 
@@ -302,16 +299,9 @@ async def create_asset(
         # Substring matching covers: ubuntu-desktop, linux-server, windows-desktop, windows-server, etc.
         _slug_lower = (final_cat_slug or "").lower()
         if "linux" in _slug_lower or "ubuntu" in _slug_lower:
-            final_os_type = OSType.linux
+            final_os_type = "linux"
         elif "windows" in _slug_lower:
-            final_os_type = OSType.windows
-        elif effective_kind == "os":
-            sub_enum_cls = _SUBKIND_TO_ENUM.get(effective_kind)
-            if sub_enum_cls:
-                for member in sub_enum_cls:
-                    if member.value == final_cat_slug:
-                        final_os_type = OSType(member.value)
-                        break
+            final_os_type = "windows"
 
     # Default ports
     if not port or port == 0:
@@ -320,8 +310,8 @@ async def create_asset(
             "mongodb": 27017, "mssql": 1433,
             "linux": 22, "windows": 445,
         }
-        key = (final_db_type.value if final_db_type else
-               final_os_type.value if final_os_type else None)
+        key = (final_db_type if final_db_type else
+               final_os_type if final_os_type else None)
         port = defaults.get(key, 22) if key else 22
 
     asset = models.Asset(
@@ -589,7 +579,7 @@ async def test_connection(
             username=cred.username, password=password,
             private_key=private_key, passphrase=passphrase, timeout=15,
         )
-    elif asset.os_type == models.OSType.linux:
+    elif asset.os_type == "linux":
         result, _ = ssh_scanner.scan_asset(
             ip=asset.ip, port=asset.port,
             username=cred.username, password=password,

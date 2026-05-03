@@ -129,8 +129,6 @@ def trigger_analysis(
     - scope "asset": analyze accounts on specific asset (scope_id = asset_id)
     - scope "identity": analyze accounts for specific human identity (scope_id = identity_id)
     """
-    if body.scope not in ("global", "asset", "identity"):
-        raise HTTPException(400, "scope must be global | asset | identity")
     if body.scope != "global" and body.scope_id is None:
         raise HTTPException(400, "scope_id required when scope is asset or identity")
 

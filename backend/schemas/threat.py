@@ -1,7 +1,9 @@
 """Identity threat analysis Pydantic schemas."""
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 from pydantic import BaseModel, Field
+
+ScopeLiteral = Literal["global", "asset", "identity"]
 
 
 class ThreatSignalItem(BaseModel):
@@ -126,7 +128,7 @@ class ThreatAccountSignalResponse(BaseModel):
 
 
 class AnalyzeRequest(BaseModel):
-    scope: str = "global"
+    scope: ScopeLiteral = "global"
     scope_id: Optional[int] = None
     lang: str = "zh"
 

@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, List, Literal
 from pydantic import BaseModel
 
-NHITypeLiteral = Literal["service", "system", "cloud", "workload", "cicd", "application", "apikey", "unknown"]
+NHITypeLiteral = Literal["service", "system", "cloud", "workload", "cicd", "application", "apikey", "ai_agent", "unknown"]
 NHILevelLiteral = Literal["critical", "high", "medium", "low"]
 
 

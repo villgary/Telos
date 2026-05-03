@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, List, Any, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
-from backend.models._enums import AssetCategory, OSType, DBType, NetworkVendor, IoTType, AssetRelationType, AssetStatus, DirectoryType, CloudProviderType
+from backend.models._enums import AssetCategory, AssetRelationType, AssetStatus, DirectoryType, CloudProviderType, SubTypeKind
 
 if TYPE_CHECKING:
     from backend.schemas.assets import AssetSummary
@@ -54,7 +54,7 @@ class SubTypeDefCreate(BaseModel):
     slug: str = Field(..., max_length=32)
     name: str = Field(..., max_length=64)
     description: Optional[str] = Field(None, max_length=256)
-    sub_type_kind: str = Field(..., max_length=32)  # 'network', 'iot', 'database', 'os'
+    sub_type_kind: SubTypeKind = Field(...)
     icon: Optional[str] = Field(None, max_length=32)
     color: Optional[str] = Field(None, max_length=8)
     sort_order: int = 0
@@ -111,10 +111,10 @@ class AssetBase(BaseModel):
     asset_category: Optional[AssetCategory] = None
     asset_category_def_id: Optional[int] = None
     category_slug: Optional[str] = Field(None, max_length=64)
-    os_type: Optional[OSType] = None
-    db_type: Optional[DBType] = None
-    network_type: Optional[NetworkVendor] = None
-    iot_type: Optional[IoTType] = None
+    os_type: Optional[str] = Field(None, max_length=64)
+    db_type: Optional[str] = Field(None, max_length=64)
+    network_type: Optional[str] = Field(None, max_length=64)
+    iot_type: Optional[str] = Field(None, max_length=64)
     directory_type: Optional[DirectoryType] = None
     cloud_provider_type: Optional[CloudProviderType] = None
     cloud_region: Optional[str] = Field(None, max_length=32)
@@ -135,10 +135,10 @@ class AssetUpdate(BaseModel):
     asset_category: Optional[AssetCategory] = None
     asset_category_def_id: Optional[int] = None
     category_slug: Optional[str] = Field(None, max_length=64)
-    os_type: Optional[OSType] = None
-    db_type: Optional[DBType] = None
-    network_type: Optional[NetworkVendor] = None
-    iot_type: Optional[IoTType] = None
+    os_type: Optional[str] = Field(None, max_length=64)
+    db_type: Optional[str] = Field(None, max_length=64)
+    network_type: Optional[str] = Field(None, max_length=64)
+    iot_type: Optional[str] = Field(None, max_length=64)
     directory_type: Optional[DirectoryType] = None
     cloud_provider_type: Optional[CloudProviderType] = None
     cloud_region: Optional[str] = Field(None, max_length=32)
@@ -157,10 +157,10 @@ class AssetResponse(BaseModel):
     asset_category: AssetCategory
     asset_category_def_id: Optional[int]
     category_slug: Optional[str] = Field(None, max_length=64)
-    os_type: Optional[OSType]
-    db_type: Optional[DBType]
-    network_type: Optional[NetworkVendor]
-    iot_type: Optional[IoTType]
+    os_type: Optional[str]
+    db_type: Optional[str]
+    network_type: Optional[str]
+    iot_type: Optional[str]
     directory_type: Optional[DirectoryType]
     cloud_provider_type: Optional[CloudProviderType]
     cloud_region: Optional[str]

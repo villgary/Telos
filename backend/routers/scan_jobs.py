@@ -7,7 +7,7 @@ from sqlalchemy import text
 from backend.database import get_db
 from backend import models, schemas, auth, encryption
 from backend.models import AccountRiskScore
-from backend.models import ScanJobStatus, AssetStatus, OSType, AssetCategory, DBType, CloudProviderType
+from backend.models import ScanJobStatus, AssetStatus, AssetCategory, CloudProviderType
 from backend.services import ssh_scanner, win_scanner, alert_service
 from backend.services.ssh_scanner import ConnectionResult
 from backend.services.risk_propagation import propagate_risk
@@ -58,7 +58,7 @@ def _execute_scan(job_id: int) -> None:
         try:
             if asset.asset_category == AssetCategory.database:
                 from backend.services import db_scanner
-                db_type_val = asset.db_type.value if asset.db_type else "mysql"
+                db_type_val = asset.db_type if asset.db_type else "mysql"
                 conn_result, accounts = db_scanner.scan_asset(
                     ip=asset.ip,
                     port=asset.port or 0,
@@ -68,7 +68,7 @@ def _execute_scan(job_id: int) -> None:
                     timeout=120,
                 )
             elif asset.asset_category == AssetCategory.network:
-                network_vendor = asset.network_type.value if asset.network_type else "generic"
+                network_vendor = asset.network_type if asset.network_type else "generic"
                 if os.environ.get("USE_NAPALM_SCANNER"):
                     from backend.services import napalm_scanner
                     conn_result, accounts = napalm_scanner.scan_asset(
@@ -150,7 +150,7 @@ def _execute_scan(job_id: int) -> None:
                 else:
                     conn_result = ConnectionResult(success=False, error=f"Unsupported cloud provider: {cloud_type}", status="offline")
                     accounts = []
-            elif asset.os_type == OSType.linux:
+            elif asset.os_type == "linux":
                 # Try Go scanner first if GO_SCANNER_URL is configured
                 go_used = False
                 if os.environ.get("GO_SCANNER_URL"):
@@ -182,7 +182,7 @@ def _execute_scan(job_id: int) -> None:
                         passphrase=passphrase,
                         timeout=120,
                     )
-            elif asset.os_type == OSType.windows:
+            elif asset.os_type == "windows":
                 conn_result, accounts = win_scanner.scan_asset(
                     ip=asset.ip,
                     port=asset.port,

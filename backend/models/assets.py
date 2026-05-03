@@ -8,7 +8,7 @@ from sqlalchemy.orm import relationship, backref
 
 from backend.models._db import Base
 from backend.models._enums import (
-    AssetCategory, OSType, DBType, NetworkVendor, IoTType,
+    AssetCategory,
     AuthType, AssetStatus, AssetRelationType, DirectoryType,
     CloudProviderType,
 )
@@ -86,10 +86,10 @@ class Asset(Base):
     ip = Column(String(45), nullable=False, index=True)
     hostname = Column(String(255), nullable=True)
     asset_category = Column(Enum(AssetCategory), nullable=False, default=AssetCategory.server)
-    os_type = Column(Enum(OSType), nullable=True)
-    db_type = Column(Enum(DBType), nullable=True)
-    network_type = Column(Enum(NetworkVendor), nullable=True)
-    iot_type = Column(Enum(IoTType), nullable=True)
+    os_type = Column(String(64), nullable=True)
+    db_type = Column(String(64), nullable=True)
+    network_type = Column(String(64), nullable=True)
+    iot_type = Column(String(64), nullable=True)
     directory_type = Column(Enum(DirectoryType), nullable=True)
     cloud_provider_type = Column(Enum(CloudProviderType), nullable=True)
     cloud_region = Column(String(32), nullable=True)

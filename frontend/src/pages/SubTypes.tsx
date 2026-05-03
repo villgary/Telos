@@ -23,20 +23,31 @@ interface SubTypeDef {
   sort_order: number
 }
 
-const KIND_LABELS: Record<string, string> = {
-  network: 'Network Vendors',
-  iot: 'IoT Device Types',
-  database: 'Database Types',
-  os: 'OS Types',
-  cloud: 'Cloud Providers',
-}
-
-const KIND_COLORS: Record<string, string> = {
+const KIND_COLOR_FALLBACK: Record<string, string> = {
   network: 'blue',
   iot: 'green',
   database: 'purple',
   os: 'orange',
   cloud: 'cyan',
+}
+
+function getKindLabel(kind: string, t: (k: string) => string): string {
+  const key = `subtype.kind.${kind}`
+  const translated = t(key)
+  if (translated && translated !== key) return translated
+  const defaults: Record<string, string> = {
+    network: 'Network Vendors',
+    iot: 'IoT Device Types',
+    database: 'Database Types',
+    os: 'OS Types',
+    cloud: 'Cloud Providers',
+  }
+  return defaults[kind] || kind
+}
+
+function getKindColor(kind: string, subTypes: SubTypeDef[]): string {
+  const first = subTypes.find(s => s.sub_type_kind === kind && s.color)
+  return first?.color || KIND_COLOR_FALLBACK[kind] || '#999'
 }
 
 export default function SubTypes() {
@@ -131,7 +142,7 @@ export default function SubTypes() {
       dataIndex: 'sub_type_kind',
       key: 'sub_type_kind',
       render: (kind: string) => (
-        <Tag color={KIND_COLORS[kind] || 'default'}>{KIND_LABELS[kind] || kind}</Tag>
+        <Tag color={getKindColor(kind, subTypes) || 'default'}>{getKindLabel(kind, t)}</Tag>
       ),
     },
     {
@@ -195,12 +206,12 @@ export default function SubTypes() {
           {(['network', 'iot', 'database', 'os', 'cloud'] as const).map(kind => (
             <Col span={6} key={kind}>
               <Card
-                title={<Tag color={KIND_COLORS[kind]}>{KIND_LABELS[kind]}</Tag>}
+                title={<Tag color={getKindColor(kind, subTypes)}>{getKindLabel(kind, t)}</Tag>}
                 size="small"
                 style={{ marginBottom: 16 }}
               >
                 {grouped[kind].length === 0 ? (
-                  <Text type="secondary" style={{ fontSize: 12 }}>No {KIND_LABELS[kind]} defined</Text>
+                  <Text type="secondary" style={{ fontSize: 12 }}>No {getKindLabel(kind, t)} defined</Text>
                 ) : (
                   grouped[kind].map(st => (
                     <div key={st.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}>

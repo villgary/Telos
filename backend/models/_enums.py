@@ -163,6 +163,7 @@ class NHIType(str, enum.Enum):
     CI_CD_PIPELINE = "cicd"
     APPLICATION = "application"
     API_KEY = "apikey"
+    AI_AGENT = "ai_agent"
     UNKNOWN = "unknown"
 
 
