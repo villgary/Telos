@@ -61,6 +61,17 @@ interface AssetCategoryDef {
   parent_id?: number | null
 }
 
+interface SubTypeDef {
+  id: number
+  slug: string
+  name: string
+  description?: string
+  sub_type_kind: 'network' | 'iot' | 'database' | 'os'
+  icon?: string
+  color?: string
+  sort_order: number
+}
+
 const STATUS_COLOR: Record<string, string> = {
   online: 'green',
   offline: 'red',
@@ -74,6 +85,7 @@ export default function Assets() {
   const [credentials, setCredentials] = useState<Credential[]>([])
   const [groups, setGroups] = useState<AssetGroup[]>([])
   const [categories, setCategories] = useState<AssetCategoryDef[]>([])
+  const [subTypes, setSubTypes] = useState<SubTypeDef[]>([])
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editAsset, setEditAsset] = useState<Asset | null>(null)
@@ -203,6 +215,12 @@ export default function Assets() {
       .catch(() => setCatCascaderOptions([]))
   }
 
+  const fetchSubTypes = () => {
+    api.get('/sub-types')
+      .then(r => setSubTypes(r.data))
+      .catch(() => setSubTypes([]))
+  }
+
   // Build category tree from flat list (used by drawer form, not filter)
   const catMap = new Map<number, AssetCategoryDef>()
   categories.forEach(c => catMap.set(c.id, c))
@@ -213,6 +231,7 @@ export default function Assets() {
     fetchGroups()
     fetchCategories()
     fetchCatTree()
+    fetchSubTypes()
   }, [])
 
   const openAdd = () => {
@@ -738,50 +757,57 @@ export default function Assets() {
             // Skip if still none/undefined
             if (!subKind || subKind === 'none') return null
             if (subKind === 'database') {
+              const dbTypes = subTypes.filter(s => s.sub_type_kind === 'database')
               return (
                 <Form.Item name="db_type" label={t('asset.dbType')} rules={[{ required: true, message: t('asset.selectDbType') }]}>
                   <Select placeholder={t('asset.selectDbType')}>
-                    <Option value="mysql">{t('asset.dbMysql')}</Option>
-                    <Option value="postgresql">{t('asset.dbPostgresql')}</Option>
-                    <Option value="redis">{t('asset.dbRedis')}</Option>
-                    <Option value="mongodb">{t('asset.dbMongodb')}</Option>
-                    <Option value="mssql">{t('asset.dbMssql')}</Option>
-                    <Option value="oracle">{t('asset.dbOracle')}</Option>
+                    {dbTypes.map(s => (
+                      <Option key={s.slug} value={s.slug}>
+                        <Tag color={s.color || '#999'}>{s.name}</Tag>
+                      </Option>
+                    ))}
                   </Select>
                 </Form.Item>
               )
             }
             if (subKind === 'network') {
+              const netTypes = subTypes.filter(s => s.sub_type_kind === 'network')
               return (
                 <Form.Item name="network_type" label={t('asset.vendor')} rules={[{ required: true, message: t('asset.selectVendor') }]}>
                   <Select placeholder={t('asset.selectVendor')}>
-                    <Option value="cisco">{t('asset.cisco')}</Option>
-                    <Option value="h3c">{t('asset.h3c')}</Option>
-                    <Option value="huawei">{t('status.huawei')}</Option>
+                    {netTypes.map(s => (
+                      <Option key={s.slug} value={s.slug}>
+                        <Tag color={s.color || '#999'}>{s.name}</Tag>
+                      </Option>
+                    ))}
                   </Select>
                 </Form.Item>
               )
             }
             if (subKind === 'iot') {
+              const iotDeviceTypes = subTypes.filter(s => s.sub_type_kind === 'iot')
               return (
                 <Form.Item name="iot_type" label={t('asset.iotDeviceType')} rules={[{ required: true, message: t('asset.selectIotType') }]}>
                   <Select placeholder={t('asset.selectIotType')}>
-                    <Option value="camera">{t('asset.ipCamera')}</Option>
-                    <Option value="nvr">{t('asset.nvr')}</Option>
-                    <Option value="dvr">{t('asset.dvr')}</Option>
-                    <Option value="sensor">{t('asset.sensor')}</Option>
-                    <Option value="gateway">{t('asset.iotGateway')}</Option>
-                    <Option value="other">{t('asset.otherIot')}</Option>
+                    {iotDeviceTypes.map(s => (
+                      <Option key={s.slug} value={s.slug}>
+                        <Tag color={s.color || '#999'}>{s.name}</Tag>
+                      </Option>
+                    ))}
                   </Select>
                 </Form.Item>
               )
             }
             if (subKind === 'os') {
+              const osTypes = subTypes.filter(s => s.sub_type_kind === 'os')
               return (
                 <Form.Item name="os_type" label={t('asset.os')} rules={[{ required: true, message: t('asset.selectOs') }]}>
                   <Select placeholder={t('asset.selectOs')}>
-                    <Option value="linux">{t('asset.osLinux')}</Option>
-                    <Option value="windows">{t('asset.osWindows')}</Option>
+                    {osTypes.map(s => (
+                      <Option key={s.slug} value={s.slug}>
+                        <Tag color={s.color || '#999'}>{s.name}</Tag>
+                      </Option>
+                    ))}
                   </Select>
                 </Form.Item>
               )

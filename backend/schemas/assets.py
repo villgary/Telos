@@ -50,6 +50,38 @@ class AssetCategoryTreeResponse(BaseModel):
     model_config = {"from_attributes": True, "extra": "forbid"}
 
 
+class SubTypeDefCreate(BaseModel):
+    slug: str = Field(..., max_length=32)
+    name: str = Field(..., max_length=64)
+    description: Optional[str] = Field(None, max_length=256)
+    sub_type_kind: str = Field(..., max_length=32)  # 'network', 'iot', 'database', 'os'
+    icon: Optional[str] = Field(None, max_length=32)
+    color: Optional[str] = Field(None, max_length=8)
+    sort_order: int = 0
+
+
+class SubTypeDefUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=64)
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = Field(None, max_length=8)
+    sort_order: Optional[int] = None
+
+
+class SubTypeDefResponse(BaseModel):
+    id: int
+    slug: str
+    name: str
+    description: Optional[str]
+    sub_type_kind: str
+    icon: Optional[str]
+    color: Optional[str]
+    sort_order: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True, "extra": "forbid"}
+
+
 class AssetGroupCreate(BaseModel):
     name: str = Field(..., max_length=128)
     description: Optional[str] = Field(None, max_length=512)

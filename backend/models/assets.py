@@ -30,6 +30,21 @@ class AssetCategoryDef(Base):
     parent = relationship("AssetCategoryDef", remote_side=[id], backref="children")
 
 
+class SubTypeDef(Base):
+    """Flexible sub-type definitions for assets (network vendors, IoT types, DB types, OS types)."""
+    __tablename__ = "sub_type_defs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    slug = Column(String(32), unique=True, nullable=False, index=True)
+    name = Column(String(64), nullable=False)
+    description = Column(String(256), nullable=True)
+    sub_type_kind = Column(String(32), nullable=False, index=True)  # 'network', 'iot', 'database', 'os'
+    icon = Column(String(32), nullable=True)
+    color = Column(String(8), nullable=True)
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class Credential(Base):
     __tablename__ = "credentials"
 

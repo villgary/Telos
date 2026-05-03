@@ -36,6 +36,7 @@ import Dashboard from './pages/ExecutiveDashboard'
 import Assets from './pages/Assets'
 import AssetCategories from './pages/AssetCategories'
 import AssetGroups from './pages/AssetGroups'
+import SubTypes from './pages/SubTypes'
 import Credentials from './pages/Credentials'
 import Users from './pages/Users'
 import ScanJobs from './pages/ScanJobs'
@@ -240,6 +241,7 @@ function AppLayout({ viewMode, setViewMode }: AppLayoutProps) {
               <Menu.Item key="assets" icon={<AppstoreOutlined />}><Link to="/assets">{t('nav.assetList')}</Link></Menu.Item>
               <Menu.Item key="asset-categories" icon={<FolderOutlined />}><Link to="/asset-categories">{t('nav.assetCategories')}</Link></Menu.Item>
               <Menu.Item key="asset-groups" icon={<ClusterOutlined />}><Link to="/asset-groups">{t('nav.assetGroups')}</Link></Menu.Item>
+              <Menu.Item key="sub-types" icon={<AppstoreOutlined />}><Link to="/sub-types">Sub-Types</Link></Menu.Item>
               <Menu.Item key="asset-topology" icon={<NodeIndexOutlined />}><Link to="/asset-topology">{t('nav.assetTopology')}</Link></Menu.Item>
             </Menu.SubMenu>
 
@@ -302,6 +304,7 @@ export default function App() {
         <Route path="/asset-categories" element={<AssetCategories />} />
         <Route path="/asset-topology" element={<AssetTopology />} />
         <Route path="/asset-groups" element={<AssetGroups />} />
+        <Route path="/sub-types" element={<SubTypes />} />
         <Route path="/scans" element={<ScanJobs />} />
         <Route path="/schedules" element={<SchedulePage />} />
         <Route path="/diff" element={<DiffView />} />
