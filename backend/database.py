@@ -7,12 +7,10 @@ settings = get_settings()
 DATABASE_URL = settings.database_url
 
 is_sqlite = DATABASE_URL.startswith("sqlite")
-if not is_sqlite:
-    os.environ["DB_SSLMODE"] = settings.db_ssl_mode
 
 connect_args = {}
 if not is_sqlite:
-    connect_args["sslmode"] = os.getenv("DB_SSLMODE", "prefer")
+    connect_args["sslmode"] = settings.db_ssl_mode
 
 if is_sqlite:
     engine = create_engine(
@@ -23,8 +21,8 @@ if is_sqlite:
 else:
     engine = create_engine(
         DATABASE_URL,
-        pool_size=int(os.getenv("DB_POOL_SIZE", "10")),
-        max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
         pool_recycle=int(os.getenv("DB_POOL_RECYCLE", "3600")),
         pool_pre_ping=True,
         echo=False,
