@@ -8,7 +8,10 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "check-i18n": "node scripts/check-i18n.mjs",
-    "prebuild": "node scripts/check-i18n.mjs"
+    "prebuild": "node scripts/check-i18n.mjs",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.1",
@@ -26,10 +29,15 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.0",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "jsdom": "^25.0.0",
     "typescript": "^5.5.4",
-    "vite": "^5.4.8"
+    "vite": "^5.4.8",
+    "vitest": "^2.1.0",
+    "@vitest/ui": "^2.1.0"
   }
 }

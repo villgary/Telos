@@ -111,3 +111,34 @@ def compute_diff(
         items.append(diff_item)
 
     return items, summary
+
+
+class DiffEngine:
+    """Service for computing account differences with plain dict representations."""
+
+    def compute_diff(self, old_accounts, new_accounts):
+        """
+        Compare account dicts A (base) vs B (compare).
+
+        Args:
+            old_accounts: list of account dicts from base state
+            new_accounts: list of account dicts from compare state
+
+        Returns:
+            {"accounts": [...]} where each account dict has change_type field
+        """
+        old_map = {a["username"]: a for a in old_accounts}
+        new_map = {a["username"]: a for a in new_accounts}
+        changes = []
+
+        for username, new_acc in new_map.items():
+            if username not in old_map:
+                changes.append({**new_acc, "change_type": "added"})
+            elif old_map[username] != new_acc:
+                changes.append({**new_acc, "change_type": "modified", "old": old_map[username]})
+
+        for username in old_map:
+            if username not in new_map:
+                changes.append({**old_map[username], "change_type": "removed"})
+
+        return {"accounts": changes}
