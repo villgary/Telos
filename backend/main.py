@@ -279,7 +279,10 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
     # Distinguish known vs unknown exceptions
     if hasattr(exc, "status_code"):
-        return JSONResponse(status_code=getattr(exc, "status_code", 500), content={"detail": str(exc)})
+        return JSONResponse(
+            status_code=getattr(exc, "status_code", 500),
+            content={"detail": str(exc), "trace_id": trace_id}
+        )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "服务器内部错误，请联系管理员", "trace_id": trace_id},
