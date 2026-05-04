@@ -9,6 +9,7 @@ load_dotenv(Path(__file__).parent / ".env")
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from slowapi.middleware import SlowAPIMiddleware
 
 # Must configure logging before other imports that use it
@@ -24,6 +25,7 @@ from backend.middleware.security_headers import SecurityHeadersMiddleware
 from backend.middleware.body_capture import BodyCaptureMiddleware
 from backend.middleware.rate_limit import limiter, rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from backend.schemas.errors import ErrorResponse, ValidationErrorResponse, ValidationErrorItem
 
 
 def _seed_asset_categories(db):
@@ -277,15 +279,26 @@ async def global_exception_handler(request: Request, exc: Exception):
         method=request.method,
         exc_type=type(exc).__name__,
     )
-    # Distinguish known vs unknown exceptions
     if hasattr(exc, "status_code"):
-        return JSONResponse(
-            status_code=getattr(exc, "status_code", 500),
-            content={"detail": str(exc), "trace_id": trace_id}
-        )
+        error = ErrorResponse(detail=str(exc), trace_id=trace_id)
+        return JSONResponse(status_code=getattr(exc, "status_code", 500), content=error.model_dump())
+    error = ErrorResponse(detail="服务器内部错误，请联系管理员", trace_id=trace_id)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "服务器内部错误，请联系管理员", "trace_id": trace_id},
+        content=error.model_dump(),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    trace_id = get_trace_id()
+    errors = [
+        ValidationErrorItem(loc=err["loc"], msg=err["msg"], type=err["type"])
+        for err in exc.errors()
+    ]
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=ValidationErrorResponse(detail=errors, code="validation_error").model_dump(),
     )
 
 

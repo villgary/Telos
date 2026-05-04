@@ -122,3 +122,6 @@ from backend.schemas.nhi import (
     NHIIdentityResponse, NHIInventoryResponse,
     NHIAlertResponse, NHIDashboardResponse, NHIPolicyResponse,
 )
+
+# ── Error schemas ─────────────────────────────────────────────────────
+from backend.schemas.errors import ErrorResponse, ValidationErrorItem, ValidationErrorResponse
