@@ -116,14 +116,13 @@ def compute_diff(
 class DiffEngine:
     """Service for computing account differences with plain dict representations."""
 
-    def compute_diff(self, old_accounts, new_accounts, account_type):
+    def compute_diff(self, old_accounts, new_accounts):
         """
         Compare account dicts A (base) vs B (compare).
 
         Args:
             old_accounts: list of account dicts from base state
             new_accounts: list of account dicts from compare state
-            account_type: string like "linux" describing the account type
 
         Returns:
             {"accounts": [...]} where each account dict has change_type field

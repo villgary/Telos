@@ -169,19 +169,19 @@ class TestDiffEngineAccountChanges:
         engine = diff_engine.DiffEngine()
         old_accounts = [{"username": "alice", "uid": 1001}]
         new_accounts = [{"username": "alice", "uid": 1001}, {"username": "bob", "uid": 1002}]
-        diff = engine.compute_diff(old_accounts, new_accounts, "linux")
+        diff = engine.compute_diff(old_accounts, new_accounts)
         assert any(d["change_type"] == "added" and d["username"] == "bob" for d in diff["accounts"])
 
     def test_detect_removed_accounts(self):
         engine = diff_engine.DiffEngine()
         old_accounts = [{"username": "alice", "uid": 1001}, {"username": "bob", "uid": 1002}]
         new_accounts = [{"username": "alice", "uid": 1001}]
-        diff = engine.compute_diff(old_accounts, new_accounts, "linux")
+        diff = engine.compute_diff(old_accounts, new_accounts)
         assert any(d["change_type"] == "removed" and d["username"] == "bob" for d in diff["accounts"])
 
     def test_detect_modified_accounts(self):
         engine = diff_engine.DiffEngine()
         old_accounts = [{"username": "alice", "uid": 1001, "home": "/home/alice"}]
         new_accounts = [{"username": "alice", "uid": 1001, "home": "/var/alice"}]
-        diff = engine.compute_diff(old_accounts, new_accounts, "linux")
+        diff = engine.compute_diff(old_accounts, new_accounts)
         assert any(d["change_type"] == "modified" and d["username"] == "alice" for d in diff["accounts"])
