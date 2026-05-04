@@ -223,18 +223,24 @@ export function AppLayout({ viewMode, setViewMode }: AppLayoutProps) {
             <Menu.SubMenu key="security-group" icon={<SafetyCertificateOutlined />} title={t('nav.security')}>
               <Menu.Item key="alerts" icon={<BellOutlined />}><Link to="/alerts">{t('nav.alerts')}</Link></Menu.Item>
               <Menu.Item key="compliance" icon={<SafetyOutlined />}><Link to="/compliance">{t('nav.compliance')}</Link></Menu.Item>
-              <Menu.Item key="identities" icon={<TeamOutlined />}><Link to="/identities">{t('nav.identities')}</Link></Menu.Item>
-              <Menu.Item key="account-risk" icon={<AlertOutlined />}><Link to="/account-risk">{t('nav.accountRiskList')}</Link></Menu.Item>
-              <Menu.Item key="ueba" icon={<LineChartOutlined />}><Link to="/ueba">{t('nav.ueba')}</Link></Menu.Item>
-              <Menu.Item key="lifecycle" icon={<ClockCircleOutlined />}><Link to="/lifecycle">{t('nav.lifecycle')}</Link></Menu.Item>
-              <Menu.Item key="pam" icon={<KeyOutlined />}><Link to="/pam">{t('nav.pam')}</Link></Menu.Item>
-              <Menu.Item key="nhi" icon={<ApiOutlined />}><Link to="/nhi">{t('nav.nhi')}</Link></Menu.Item>
-              <Menu.Item key="review" icon={<CheckCircleOutlined />}><Link to="/review">{t('nav.review')}</Link></Menu.Item>
-              <Menu.Item key="policies" icon={<SettingOutlined />}><Link to="/policies">{t('nav.policyManagement')}</Link></Menu.Item>
               <Menu.SubMenu key="kb-group" icon={<BookOutlined />} title={t('nav.knowledgeBase')}>
                 <Menu.Item key="knowledge-base"><Link to="/knowledge-base">{t('kb.browse')}</Link></Menu.Item>
                 <Menu.Item key="kb-admin"><Link to="/kb-admin">{t('kb.admin')}</Link></Menu.Item>
               </Menu.SubMenu>
+            </Menu.SubMenu>
+
+            <Menu.SubMenu key="identity-ops" icon={<TeamOutlined />} title={t('nav.identityOps') || 'Identity Operations'}>
+              <Menu.Item key="identities" icon={<TeamOutlined />}><Link to="/identities">{t('nav.identities')}</Link></Menu.Item>
+              <Menu.Item key="ueba" icon={<LineChartOutlined />}><Link to="/ueba">{t('nav.ueba')}</Link></Menu.Item>
+              <Menu.Item key="lifecycle" icon={<ClockCircleOutlined />}><Link to="/lifecycle">{t('nav.lifecycle')}</Link></Menu.Item>
+              <Menu.Item key="pam" icon={<KeyOutlined />}><Link to="/pam">{t('nav.pam')}</Link></Menu.Item>
+              <Menu.Item key="nhi" icon={<ApiOutlined />}><Link to="/nhi">{t('nav.nhi')}</Link></Menu.Item>
+            </Menu.SubMenu>
+
+            <Menu.SubMenu key="risk-compliance" icon={<AlertOutlined />} title={t('nav.riskCompliance') || 'Risk & Compliance'}>
+              <Menu.Item key="account-risk" icon={<AlertOutlined />}><Link to="/account-risk">{t('nav.accountRiskList')}</Link></Menu.Item>
+              <Menu.Item key="policies" icon={<SettingOutlined />}><Link to="/policies">{t('nav.policyManagement')}</Link></Menu.Item>
+              <Menu.Item key="review" icon={<CheckCircleOutlined />}><Link to="/review">{t('nav.review')}</Link></Menu.Item>
             </Menu.SubMenu>
 
             <Menu.SubMenu key="system-group" icon={<ToolOutlined />} title={t('nav.system')}>
