@@ -1,13 +1,16 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from backend.config import get_settings
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL environment variable is not set")
+settings = get_settings()
+DATABASE_URL = settings.database_url
+
+is_sqlite = DATABASE_URL.startswith("sqlite")
+if not is_sqlite:
+    os.environ["DB_SSLMODE"] = settings.db_ssl_mode
 
 connect_args = {}
-is_sqlite = DATABASE_URL.startswith("sqlite")
 if not is_sqlite:
     connect_args["sslmode"] = os.getenv("DB_SSLMODE", "prefer")
 
