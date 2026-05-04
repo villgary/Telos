@@ -199,18 +199,11 @@ export function AppLayout({ viewMode, setViewMode }: AppLayoutProps) {
               <Link to="/ai">{t('nav.aiAnalysis')}</Link>
             </Menu.Item>
 
-            <Menu.Item key="identity-threat" icon={<SafetyOutlined />}>
-              <Link to="/identity-threat">{t('threat.title')}</Link>
-            </Menu.Item>
-            <Menu.Item key="attck-coverage" icon={<AimOutlined />}>
-              <Link to="/attck-coverage">{t('attck.title') || 'ATT&CK Coverage'}</Link>
-            </Menu.Item>
-
             <Menu.SubMenu key="asset-group" icon={<CloudServerOutlined />} title={t('nav.assetManagement')}>
               <Menu.Item key="assets" icon={<AppstoreOutlined />}><Link to="/assets">{t('nav.assetList')}</Link></Menu.Item>
               <Menu.Item key="asset-categories" icon={<FolderOutlined />}><Link to="/asset-categories">{t('nav.assetCategories')}</Link></Menu.Item>
               <Menu.Item key="asset-groups" icon={<ClusterOutlined />}><Link to="/asset-groups">{t('nav.assetGroups')}</Link></Menu.Item>
-              <Menu.Item key="sub-types" icon={<AppstoreOutlined />}><Link to="/sub-types">Sub-Types</Link></Menu.Item>
+              <Menu.Item key="sub-types" icon={<AppstoreOutlined />}><Link to="/sub-types">{t('nav.subTypes')}</Link></Menu.Item>
               <Menu.Item key="asset-topology" icon={<NodeIndexOutlined />}><Link to="/asset-topology">{t('nav.assetTopology')}</Link></Menu.Item>
             </Menu.SubMenu>
 
@@ -222,7 +215,8 @@ export function AppLayout({ viewMode, setViewMode }: AppLayoutProps) {
 
             <Menu.SubMenu key="security-group" icon={<SafetyCertificateOutlined />} title={t('nav.security')}>
               <Menu.Item key="alerts" icon={<BellOutlined />}><Link to="/alerts">{t('nav.alerts')}</Link></Menu.Item>
-              <Menu.Item key="compliance" icon={<SafetyOutlined />}><Link to="/compliance">{t('nav.compliance')}</Link></Menu.Item>
+              <Menu.Item key="attck-coverage" icon={<AimOutlined />}><Link to="/attck-coverage">{t('attck.title') || 'ATT&CK Coverage'}</Link></Menu.Item>
+              <Menu.Item key="identity-threat" icon={<SafetyOutlined />}><Link to="/identity-threat">{t('threat.title')}</Link></Menu.Item>
               <Menu.SubMenu key="kb-group" icon={<BookOutlined />} title={t('nav.knowledgeBase')}>
                 <Menu.Item key="knowledge-base"><Link to="/knowledge-base">{t('kb.browse')}</Link></Menu.Item>
                 <Menu.Item key="kb-admin"><Link to="/kb-admin">{t('kb.admin')}</Link></Menu.Item>
@@ -237,17 +231,18 @@ export function AppLayout({ viewMode, setViewMode }: AppLayoutProps) {
               <Menu.Item key="nhi" icon={<ApiOutlined />}><Link to="/nhi">{t('nav.nhi')}</Link></Menu.Item>
             </Menu.SubMenu>
 
-            <Menu.SubMenu key="risk-compliance" icon={<AlertOutlined />} title={t('nav.riskCompliance') || 'Risk & Compliance'}>
+            <Menu.SubMenu key="risk-compliance" icon={<SafetyOutlined />} title={t('nav.compliancePolicy') || 'Compliance & Policy'}>
               <Menu.Item key="account-risk" icon={<AlertOutlined />}><Link to="/account-risk">{t('nav.accountRiskList')}</Link></Menu.Item>
+              <Menu.Item key="compliance" icon={<SafetyOutlined />}><Link to="/compliance">{t('nav.compliance')}</Link></Menu.Item>
               <Menu.Item key="policies" icon={<SettingOutlined />}><Link to="/policies">{t('nav.policyManagement')}</Link></Menu.Item>
               <Menu.Item key="review" icon={<CheckCircleOutlined />}><Link to="/review">{t('nav.review')}</Link></Menu.Item>
+              <Menu.Item key="playbooks" icon={<ToolOutlined />}><Link to="/playbooks">{t('nav.playbooks')}</Link></Menu.Item>
             </Menu.SubMenu>
 
             <Menu.SubMenu key="system-group" icon={<ToolOutlined />} title={t('nav.system')}>
               <Menu.Item key="credentials" icon={<LockOutlined />}><Link to="/credentials">{t('nav.credentials')}</Link></Menu.Item>
               <Menu.Item key="users" icon={<UserOutlined />}><Link to="/users">{t('nav.users')}</Link></Menu.Item>
               <Menu.Item key="system-settings" icon={<SettingOutlined />}><Link to="/system-settings">{t('nav.systemSettings')}</Link></Menu.Item>
-              <Menu.Item key="playbooks" icon={<ToolOutlined />}><Link to="/playbooks">{t('nav.playbooks')}</Link></Menu.Item>
             </Menu.SubMenu>
           </Menu>
         </Sider>

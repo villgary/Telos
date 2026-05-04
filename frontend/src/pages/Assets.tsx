@@ -2,16 +2,17 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Table, Button, Space, Tag, Typography, Drawer, Form, Input, Select,
-  message, Popconfirm, Alert, Divider, Modal, List, Badge, Cascader,
+  message, Popconfirm, Alert, Divider, Modal, List, Badge, Cascader, Upload,
 } from 'antd'
 const { Title, Text, Paragraph } = Typography
 const { Option } = Select
 import {
   PlusOutlined, ReloadOutlined, DeleteOutlined, EditOutlined,
   ThunderboltOutlined, SearchOutlined, ExportOutlined,
-  RobotOutlined, UserOutlined,
+  RobotOutlined, UserOutlined, UploadOutlined,
 } from '@ant-design/icons'
 import api, { naturalLanguageSearch } from '../api/client'
+import type { UploadProps } from 'antd'
 
 interface Asset {
   id: number
@@ -112,6 +113,11 @@ export default function Assets() {
   const [nlSearchOpen, setNlSearchOpen] = useState(false)
   const [nlQuery, setNlQuery] = useState('')
   const [nlLoading, setNlLoading] = useState(false)
+
+  // CSV import state
+  const [importModalOpen, setImportModalOpen] = useState(false)
+  const [importResult, setImportResult] = useState<{ total: number; success: number; failed: number; errors: string[] } | null>(null)
+  const [importing, setImporting] = useState(false)
 
   const STATUS_LABEL: Record<string, string> = {
     online: t('status.online'),
@@ -408,6 +414,27 @@ export default function Assets() {
     }
   }
 
+  const handleImportCSV: UploadProps['customRequest'] = async (options) => {
+    const { file, onSuccess, onError } = options
+    setImporting(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file as File)
+      const r = await api.post('/assets/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setImportResult(r.data)
+      onSuccess?.(r.data)
+      fetchAssets()
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } } }
+      message.error(err.response?.data?.detail || t('msg.importFailed'))
+      onError?.(e as Error)
+    } finally {
+      setImporting(false)
+    }
+  }
+
   const handleExportCSV = () => {
     const params: Record<string, string | number> = {}
     if (searchQ) params.q = searchQ
@@ -570,6 +597,9 @@ export default function Assets() {
         <Space>
           <Button icon={<RobotOutlined />} onClick={() => setNlSearchOpen(true)}>
             {t('nav.aiSearch')}
+          </Button>
+          <Button icon={<UploadOutlined />} onClick={() => { setImportResult(null); setImportModalOpen(true) }}>
+            {t('btn.importCsv')}
           </Button>
           <Button icon={<ExportOutlined />} onClick={handleExportCSV}>{t('btn.exportCsv')}</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>
@@ -1048,6 +1078,69 @@ export default function Assets() {
             <Paragraph type="secondary" style={{ textAlign: 'center', fontSize: 13 }}>
               {t('nlSearch.hint')}
             </Paragraph>
+          )}
+        </div>
+      </Modal>
+
+      {/* CSV Import Modal */}
+      <Modal
+        title={t('btn.importCsv')}
+        open={importModalOpen}
+        onCancel={() => { setImportModalOpen(false); setImportResult(null) }}
+        footer={null}
+        width={600}
+      >
+        <div style={{ marginTop: 16 }}>
+          {importResult ? (
+            <div>
+              <Alert
+                type={importResult.failed === 0 ? 'success' : 'warning'}
+                message={
+                  <span>
+                    {t('import.result', { total: importResult.total, success: importResult.success, failed: importResult.failed })}
+                  </span>
+                }
+                style={{ marginBottom: 12 }}
+                showIcon
+              />
+              {importResult.errors.length > 0 && (
+                <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                  <Paragraph type="secondary" style={{ fontSize: 12 }}>
+                    {t('import.errors')}:
+                  </Paragraph>
+                  {importResult.errors.map((err, i) => (
+                    <div key={i} style={{ fontSize: 12, color: '#ff4d4f', marginBottom: 4 }}>{err}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <Paragraph style={{ marginBottom: 16 }}>
+                {t('import.hint')}
+              </Paragraph>
+              <div style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, marginBottom: 16 }}>
+                <Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 8 }}>{t('import.csvFormat')}:</Paragraph>
+                <pre style={{ fontSize: 11, margin: 0 }}>{t('import.csvExample')}</pre>
+              </div>
+              <Alert
+                type="info"
+                message={t('import.categoryHint')}
+                style={{ marginBottom: 16 }}
+                showIcon
+              />
+              <Upload.Dragger
+                accept=".csv"
+                customRequest={handleImportCSV}
+                showUploadList={false}
+                disabled={importing}
+              >
+                <p className="ant-upload-drag-icon">
+                  <UploadOutlined />
+                </p>
+                <p className="ant-upload-text">{t('import.dragOrClick')}</p>
+              </Upload.Dragger>
+            </div>
           )}
         </div>
       </Modal>

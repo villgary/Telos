@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request, Query
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request, Query, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -12,6 +12,7 @@ from backend import models, schemas, auth, encryption
 from backend.models import AssetCategory
 from backend.services import ssh_scanner, win_scanner
 from backend import schemas as S
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/v1/assets", tags=["资产管理"])
 
@@ -168,6 +169,260 @@ async def export_assets_csv(
         iter([output.getvalue()]),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=assets.csv"},
+    )
+
+
+class ImportResult(BaseModel):
+    total: int
+    success: int
+    failed: int
+    errors: list[str]
+
+
+@router.post("/import", response_model=ImportResult)
+async def import_assets_csv(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: models.User = Depends(auth.require_role(models.UserRole.operator, models.UserRole.admin)),
+):
+    """
+    Import assets from CSV file.
+
+    CSV format (header required):
+    - ip: IP address (required)
+    - hostname: hostname (optional)
+    - port: port number (optional, auto-detected if missing)
+    - category: category slug like linux/windows/mysql/postgresql (optional)
+    - username: credential username (required if password is provided)
+    - password: credential password (required if username is provided)
+    - auth_type: authentication type - password (default) or key
+    - group_id: group ID (optional)
+
+    Note: username/password creates a new credential automatically.
+    """
+    if not file.filename or not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="只支持 CSV 文件")
+
+    content = await file.read()
+    try:
+        decoded = content.decode('utf-8')
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="CSV 文件必须是 UTF-8 编码")
+
+    reader = csv.DictReader(io.StringIO(decoded))
+    if reader.fieldnames is None:
+        raise HTTPException(status_code=400, detail="CSV 文件为空或格式错误")
+
+    # Check required fields: either credential_id OR (username + password)
+    has_cred_id = 'credential_id' in reader.fieldnames
+    has_inline = 'username' in reader.fieldnames and 'password' in reader.fieldnames
+    if not has_cred_id and not has_inline:
+        raise HTTPException(
+            status_code=400,
+            detail="CSV 必须包含 credential_id 列，或 username + password 列（用于自动创建凭据）"
+        )
+
+    errors: list[str] = []
+    success = 0
+    failed = 0
+    total = 0
+
+    default_ports = {
+        "mysql": 3306, "postgresql": 5432, "redis": 6379,
+        "mongodb": 27017, "mssql": 1433, "oracle": 1521,
+        "linux": 22, "windows": 445,
+    }
+
+    category_slug_map = {
+        "linux": ("server", "linux"),
+        "windows": ("server", "windows"),
+        "mysql": ("database", "mysql"),
+        "postgresql": ("database", "postgresql"),
+        "redis": ("database", "redis"),
+        "mongodb": ("database", "mongodb"),
+        "mssql": ("database", "mssql"),
+        "oracle": ("database", "oracle"),
+        "cisco": ("network", "cisco"),
+        "huawei": ("network", "huawei"),
+        "h3c": ("network", "h3c"),
+    }
+
+    for row_num, row in enumerate(reader, start=2):
+        total += 1
+        ip = row.get('ip', '').strip()
+        if not ip:
+            errors.append(f"行 {row_num}: IP 地址不能为空")
+            failed += 1
+            continue
+
+        credential_id: Optional[int] = None
+
+        # Parse port early (needed for both inline cred creation and asset)
+        hostname = row.get('hostname', '').strip() or None
+        port_str = row.get('port', '').strip()
+        try:
+            port = int(port_str) if port_str else None
+        except ValueError:
+            errors.append(f"行 {row_num}: 端口必须是数字")
+            failed += 1
+            continue
+
+        group_id_str = row.get('group_id', '').strip()
+        group_id = int(group_id_str) if group_id_str else None
+
+        # Option 1: use existing credential_id
+        if has_cred_id:
+            credential_id_str = row.get('credential_id', '').strip()
+            if credential_id_str:
+                try:
+                    credential_id = int(credential_id_str)
+                except ValueError:
+                    errors.append(f"行 {row_num}: 凭据 ID 必须是数字")
+                    failed += 1
+                    continue
+                cred = db.query(models.Credential).filter(models.Credential.id == credential_id).first()
+                if not cred:
+                    errors.append(f"行 {row_num}: 凭据 ID {credential_id} 不存在")
+                    failed += 1
+                    continue
+
+        # Option 2: create inline credential from username/password
+        if has_inline:
+            username = row.get('username', '').strip()
+            password = row.get('password', '').strip()
+            if username and password:
+                auth_type_str = row.get('auth_type', '').strip().lower()
+                auth_type = models.AuthType.key if auth_type_str == 'key' else models.AuthType.password
+
+                # Create credential name: auto-{ip}-{port}-{timestamp}
+                import time
+                cred_name = f"auto-{ip}-{port or 'unknown'}-{int(time.time())}"
+
+                # Check for duplicate name and append suffix if needed
+                base_name = cred_name
+                suffix = 1
+                while db.query(models.Credential).filter(models.Credential.name == cred_name).first():
+                    cred_name = f"{base_name}-{suffix}"
+                    suffix += 1
+
+                password_enc = encryption.encrypt(password) if password else None
+
+                new_cred = models.Credential(
+                    name=cred_name,
+                    auth_type=auth_type,
+                    username=username,
+                    password_enc=password_enc,
+                    created_by=user.id,
+                )
+                db.add(new_cred)
+                db.flush()  # Get the ID without committing
+
+                credential_id = new_cred.id
+            elif not credential_id:
+                errors.append(f"行 {row_num}: 用户名或密码不能为空")
+                failed += 1
+                continue
+
+        if credential_id is None:
+            errors.append(f"行 {row_num}: 缺少有效的凭据信息")
+            failed += 1
+            continue
+
+        category_str = row.get('category', '').strip().lower()
+
+        # Determine asset category and sub-type
+        asset_category = AssetCategory.server
+        os_type = None
+        db_type = None
+        network_type = None
+        iot_type = None
+        cat_def = None
+        cat_slug = category_str or None
+
+        if category_str and category_str in category_slug_map:
+            cat_type, sub_type = category_slug_map[category_str]
+            if cat_type == "server":
+                asset_category = AssetCategory.server
+                os_type = sub_type
+            elif cat_type == "database":
+                asset_category = AssetCategory.database
+                db_type = sub_type
+            elif cat_type == "network":
+                asset_category = AssetCategory.network
+                network_type = sub_type
+
+            # Find category def by slug
+            cat_def = db.query(models.AssetCategoryDef).filter(
+                models.AssetCategoryDef.slug == category_str
+            ).first()
+        elif category_str:
+            # Try to find by slug
+            cat_def = db.query(models.AssetCategoryDef).filter(
+                models.AssetCategoryDef.slug == category_str
+            ).first()
+            if cat_def:
+                if cat_def.sub_type_kind == "database":
+                    asset_category = AssetCategory.database
+                elif cat_def.sub_type_kind == "network":
+                    asset_category = AssetCategory.network
+                elif cat_def.sub_type_kind == "iot":
+                    asset_category = AssetCategory.iot
+                elif cat_def.sub_type_kind == "os":
+                    asset_category = AssetCategory.server
+
+        # Default port
+        if not port:
+            if db_type:
+                port = default_ports.get(db_type, 3306)
+            elif os_type:
+                port = default_ports.get(os_type, 22)
+            elif network_type:
+                port = default_ports.get(network_type, 22)
+            else:
+                port = 22
+
+        # Check if asset already exists
+        existing = db.query(models.Asset).filter(
+            models.Asset.ip == ip,
+            models.Asset.port == port,
+        ).first()
+        if existing:
+            errors.append(f"行 {row_num}: 资产 {ip}:{port} 已存在，跳过")
+            failed += 1
+            continue
+
+        # Generate asset code
+        max_id = db.query(models.Asset.id).order_by(models.Asset.id.desc()).first()
+        next_num = (max_id[0] + 1) if max_id else 1
+        asset_code = f"ASM-{next_num:05d}"
+
+        asset = models.Asset(
+            asset_code=asset_code,
+            ip=ip,
+            hostname=hostname,
+            asset_category=asset_category,
+            asset_category_def_id=cat_def.id if cat_def else None,
+            category_slug=cat_slug,
+            os_type=os_type,
+            db_type=db_type,
+            network_type=network_type,
+            iot_type=iot_type,
+            port=port,
+            credential_id=credential_id,
+            group_id=group_id,
+            created_by=user.id,
+        )
+        db.add(asset)
+        success += 1
+
+    db.commit()
+
+    return ImportResult(
+        total=total,
+        success=success,
+        failed=failed,
+        errors=errors[:100],  # Limit errors to first 100
     )
 
 

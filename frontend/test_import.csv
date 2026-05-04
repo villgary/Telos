@@ -1,0 +1,11 @@
+ip,hostname,port,category,username,password,auth_type,group_id
+192.168.1.100,web-prod-01,22,linux,admin,Admin@123,password,
+192.168.1.101,db-master,3306,mysql,root,mysqlP@ssw0rd!,password,
+192.168.1.102,redis-cache,6379,redis,redis_user,Redis!Pass2024,password,
+192.168.1.103,pg-database,5432,postgresql,postgres,Pg$ecure2024,password,
+192.168.1.104,mongo-db,27017,mongodb,admin,MongoDB@Pass,password,
+192.168.1.105,cisco-switch,22,cisco,admin,Cisco@Switch123,password,
+192.168.1.106,windows-server,445,windows,administrator,Win$Admin2024,password,
+192.168.1.107,web-backup,22,linux,backup,Backup@User789,password,
+192.168.1.108,h3c-router,22,h3c,admin,H3C@Router456,password,
+192.168.1.109,test-server,22,linux,testuser,Test@123456,password,

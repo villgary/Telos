@@ -35,14 +35,15 @@ function getKindLabel(kind: string, t: (k: string) => string): string {
   const key = `subtype.kind.${kind}`
   const translated = t(key)
   if (translated && translated !== key) return translated
-  const defaults: Record<string, string> = {
-    network: 'Network Vendors',
-    iot: 'IoT Device Types',
-    database: 'Database Types',
-    os: 'OS Types',
-    cloud: 'Cloud Providers',
+  // Hardcoded fallbacks - these should match zh-CN translations
+  const zhDefaults: Record<string, string> = {
+    network: '网络厂商',
+    iot: 'IoT设备类型',
+    database: '数据库类型',
+    os: '操作系统类型',
+    cloud: '云服务商',
   }
-  return defaults[kind] || kind
+  return zhDefaults[kind] || kind
 }
 
 function getKindColor(kind: string, subTypes: SubTypeDef[]): string {
@@ -63,7 +64,7 @@ export default function SubTypes() {
     setLoading(true)
     api.get('/sub-types')
       .then(r => setSubTypes(r.data))
-      .catch(() => message.error('Failed to load sub-types'))
+      .catch(() => message.error(t('subtype.loadError') || 'Failed to load sub-types'))
       .finally(() => setLoading(false))
   }
 
@@ -93,17 +94,17 @@ export default function SubTypes() {
       setSaving(true)
       if (editSubType) {
         await api.put(`/sub-types/${editSubType.id}`, values)
-        message.success('Sub-type updated')
+        message.success(t('subtype.updated') || 'Sub-type updated')
       } else {
         await api.post('/sub-types', { ...values, slug: values.slug || values.name.toLowerCase().replace(/\s+/g, '_') })
-        message.success('Sub-type created')
+        message.success(t('subtype.created') || 'Sub-type created')
       }
       setDrawerOpen(false)
       form.resetFields()
       fetchSubTypes()
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } } }
-      message.error(err.response?.data?.detail || 'Save failed')
+      message.error(err.response?.data?.detail || t('subtype.saveError') || 'Save failed')
     } finally {
       setSaving(false)
     }
@@ -112,17 +113,17 @@ export default function SubTypes() {
   const handleDelete = async (id: number) => {
     try {
       await api.delete(`/sub-types/${id}`)
-      message.success('Sub-type deleted')
+      message.success(t('subtype.deleted') || 'Sub-type deleted')
       fetchSubTypes()
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } } }
-      message.error(err.response?.data?.detail || 'Delete failed')
+      message.error(err.response?.data?.detail || t('subtype.deleteError') || 'Delete failed')
     }
   }
 
   const columns = [
     {
-      title: 'Name',
+      title: t('subtype.column.name'),
       dataIndex: 'name',
       key: 'name',
       render: (name: string, record: SubTypeDef) => (
@@ -132,13 +133,13 @@ export default function SubTypes() {
       ),
     },
     {
-      title: 'Slug',
+      title: t('subtype.column.slug'),
       dataIndex: 'slug',
       key: 'slug',
       render: (slug: string) => <Tag>{slug}</Tag>,
     },
     {
-      title: 'Kind',
+      title: t('subtype.column.kind'),
       dataIndex: 'sub_type_kind',
       key: 'sub_type_kind',
       render: (kind: string) => (
@@ -146,28 +147,28 @@ export default function SubTypes() {
       ),
     },
     {
-      title: 'Description',
+      title: t('subtype.column.description'),
       dataIndex: 'description',
       key: 'description',
     },
     {
-      title: 'Sort Order',
+      title: t('subtype.column.sortOrder'),
       dataIndex: 'sort_order',
       key: 'sort_order',
     },
     {
-      title: 'Actions',
+      title: t('subtype.column.actions'),
       key: 'actions',
       width: 120,
       render: (_: unknown, record: SubTypeDef) => (
         <Space size="small">
           <Button size="small" type="text" icon={<EditOutlined />} onClick={() => openEdit(record)} />
           <Popconfirm
-            title="Delete this sub-type?"
+            title={t('subtype.deleteConfirm')}
             onConfirm={() => handleDelete(record.id)}
-            okText="Delete"
+            okText={t('btn.delete')}
             okButtonProps={{ danger: true, size: 'small' }}
-            cancelText="Cancel"
+            cancelText={t('btn.cancel')}
           >
             <Button size="small" type="text" danger icon={<DeleteOutlined />} />
           </Popconfirm>
@@ -200,7 +201,7 @@ export default function SubTypes() {
       </div>
 
       {loading ? (
-        <Card><Text type="secondary">Loading...</Text></Card>
+        <Card><Text type="secondary">{t('subtype.loading')}</Text></Card>
       ) : (
         <Row gutter={16}>
           {(['network', 'iot', 'database', 'os', 'cloud'] as const).map(kind => (
@@ -211,7 +212,7 @@ export default function SubTypes() {
                 style={{ marginBottom: 16 }}
               >
                 {grouped[kind].length === 0 ? (
-                  <Text type="secondary" style={{ fontSize: 12 }}>No {getKindLabel(kind, t)} defined</Text>
+                  <Text type="secondary" style={{ fontSize: 12 }}>{t('subtype.noItems', { kind: getKindLabel(kind, t) })}</Text>
                 ) : (
                   grouped[kind].map(st => (
                     <div key={st.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}>
@@ -221,11 +222,11 @@ export default function SubTypes() {
                       <Space size="small">
                         <Button size="small" type="text" icon={<EditOutlined />} onClick={() => openEdit(st)} />
                         <Popconfirm
-                          title="Delete?"
+                          title={t('subtype.deleteConfirmShort')}
                           onConfirm={() => handleDelete(st.id)}
-                          okText="Delete"
+                          okText={t('btn.delete')}
                           okButtonProps={{ danger: true, size: 'small' }}
-                          cancelText="Cancel"
+                          cancelText={t('btn.cancel')}
                         >
                           <Button size="small" type="text" danger icon={<DeleteOutlined />} />
                         </Popconfirm>
@@ -240,7 +241,7 @@ export default function SubTypes() {
       )}
 
       <Drawer
-        title={editSubType ? 'Edit Sub-Type' : 'Add Sub-Type'}
+        title={editSubType ? t('subtype.drawer.edit') : t('subtype.drawer.add')}
         open={drawerOpen}
         onClose={() => { setDrawerOpen(false); form.resetFields() }}
         width={400}
@@ -248,53 +249,53 @@ export default function SubTypes() {
         <Form form={form} layout="vertical" onFinish={handleSave}>
           <Form.Item
             name="name"
-            label="Name"
-            rules={[{ required: true, message: 'Name is required' }]}
+            label={t('subtype.form.name')}
+            rules={[{ required: true, message: t('subtype.form.nameRequired') || 'Name is required' }]}
           >
-            <Input placeholder="e.g., Palo Alto" />
+            <Input placeholder={t('subtype.form.namePlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="slug"
-            label="Slug"
-            extra="Leave empty to auto-generate from name"
+            label={t('subtype.form.slug')}
+            extra={t('subtype.form.slugHint')}
           >
-            <Input placeholder="e.g., palo_alto" disabled={!!editSubType} />
+            <Input placeholder={t('subtype.form.slugPlaceholder')} disabled={!!editSubType} />
           </Form.Item>
 
           <Form.Item
             name="sub_type_kind"
-            label="Kind"
-            rules={[{ required: true, message: 'Kind is required' }]}
+            label={t('subtype.form.kind')}
+            rules={[{ required: true, message: t('subtype.form.kindRequired') || 'Kind is required' }]}
           >
-            <Select placeholder="Select kind">
-              <Option value="network">Network Vendor</Option>
-              <Option value="iot">IoT Device Type</Option>
-              <Option value="database">Database Type</Option>
-              <Option value="os">OS Type</Option>
-              <Option value="cloud">Cloud Provider</Option>
+            <Select placeholder={t('subtype.form.kindPlaceholder') || 'Select kind'}>
+              <Option value="network">{t('subtype.networkVendor')}</Option>
+              <Option value="iot">{t('subtype.iotDeviceType')}</Option>
+              <Option value="database">{t('subtype.dbType')}</Option>
+              <Option value="os">{t('subtype.osType')}</Option>
+              <Option value="cloud">{t('subtype.cloudProvider')}</Option>
             </Select>
           </Form.Item>
 
-          <Form.Item name="color" label="Color (hex)">
+          <Form.Item name="color" label={t('subtype.form.color')}>
             <Input type="color" style={{ width: 100, height: 32 }} defaultValue="#1890ff" />
           </Form.Item>
 
-          <Form.Item name="description" label="Description">
-            <Input.TextArea placeholder="Optional description" />
+          <Form.Item name="description" label={t('subtype.form.description')}>
+            <Input.TextArea placeholder={t('subtype.form.descriptionPlaceholder')} />
           </Form.Item>
 
-          <Form.Item name="sort_order" label="Sort Order">
-            <Input type="number" placeholder="0" />
+          <Form.Item name="sort_order" label={t('subtype.form.sortOrder')}>
+            <Input type="number" placeholder={t('subtype.form.sortOrderPlaceholder')} />
           </Form.Item>
 
           <Form.Item style={{ marginTop: 24 }}>
             <Space>
               <Button type="primary" htmlType="submit" loading={saving}>
-                {editSubType ? 'Update' : 'Create'}
+                {editSubType ? t('btn.update') : t('btn.create')}
               </Button>
               <Button onClick={() => { setDrawerOpen(false); form.resetFields() }}>
-                Cancel
+                {t('btn.cancel')}
               </Button>
             </Space>
           </Form.Item>
