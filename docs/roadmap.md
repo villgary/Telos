@@ -1,4 +1,4 @@
-# AccountScan 产品路线图
+# Telos 产品路线图
 
 > **愿景**：智能化身份威胁检测与合规平台
 > **定位**：从账号扫描工具 → 持续身份监控 + AI 推理 + 合规自动化平台
@@ -237,9 +237,9 @@ deny_manual_high_privilege {
 - [x] Excel 报表导出（审查报告 / 合规报告）
 - [x] 账号风险评分（独立账号级风险分）
 
-### 第四阶段（规划中）：横向移动检测
+### 第四阶段（部分已完成）：横向移动检测
+- [x] UEBA（用户实体行为分析）- 后端已实现，前端界面已上线
 - [ ] 行为分析（基于历史基线）
-- [ ] UEBA（用户实体行为分析）
 - [ ] 与 SIEM / SOAR 集成
 
 ### 第五阶段（规划中）：国际化与扩展
@@ -258,13 +258,14 @@ frontend/src/
   locales/
     zh-CN.json      ← 中文（默认）
     en-US.json      ← 英文
-  LanguageSwitcher.tsx  ← 头部语言切换（中文 / English）
+  components/
+    AppLayout.tsx   ← 头部语言切换（中文 / English）
 ```
 
 新增语言只需：
 1. 在 `locales/` 添加新语言文件（如 `ja-JP.json`）
 2. 在 `i18n.ts` 的 `resources` 中注册
-3. 在 `LanguageSwitcher.tsx` 添加语言选项
+3. 在 `AppLayout.tsx` 添加语言选项
 
 AI 报告生成语言跟随 UI 当前语言自动切换（zh-CN → 中文报告，en-US → 英文报告）。
 
@@ -281,4 +282,4 @@ AI 报告生成语言跟随 UI 当前语言自动切换（zh-CN → 中文报告
 ### 销售话术
 
 > "你知道吗？一次供应链攻击往往始于一个被遗忘的服务账号。
-> AccountScan 让你的每一个账号都有迹可循、有险必知、有变即告。"
+> Telos 让你的每一个账号都有迹可循、有险必知、有变即告。"

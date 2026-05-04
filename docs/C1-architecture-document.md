@@ -136,46 +136,42 @@ Telos 是身份威胁检测与响应（ITDR）平台，通过自动化账号扫�
 
 ```
 backend/
-├── app/
-│   ├── api/
-│   │   ├── v1/
-│   │   │   ├── assets.py        # 资产管理 API
-│   │   │   ├── scans.py         # 扫描任务 API
-│   │   │   ├── analysis.py      # 威胁分析 API
-│   │   │   ├── alerts.py        # 告警 API
-│   │   │   ├── nhi.py           # NHI API
-│   │   │   ├── lifecycle.py      # 生命周期 API
-│   │   │   ├── compliance.py     # 合规评估 API
-│   │   │   ├── policies.py       # 策略管理 API
-│   │   │   ├── users.py          # 用户管理 API
-│   │   │   └── webhooks.py       # Webhook API
-│   │   └── deps.py               # 依赖注入
+├── main.py                      # FastAPI 入口
+├── database.py                   # PostgreSQL + SQLAlchemy
+├── models.py                     # ORM 模型
+├── schemas.py                    # Pydantic 模型
+├── routers/                      # API 路由 (v1)
+│   │   ├── auth.py              # 认证 API
+│   │   ├── assets.py            # 资产管理 API
+│   │   ├── asset_categories.py  # 资产分类 API
+│   │   ├── asset_groups.py      # 资产分组 API
+│   │   ├── asset_relationships.py # 资产关系 API
+│   │   ├── credentials.py       # 凭据管理 API
+│   │   ├── scan_jobs.py         # 扫描任务 API
+│   │   ├── snapshots.py         # 快照 API
+│   │   ├── alerts.py            # 告警 API
+│   │   ├── compliance.py        # 合规评估 API
+│   │   ├── policies.py          # 策略管理 API
+│   │   ├── lifecycle.py         # 生命周期 API
+│   │   ├── nhi.py               # NHI API
+│   │   ├── identities.py        # 身份融合 API
+│   │   ├── identity_threat.py   # 身份威胁分析 API
+│   │   ├── ueba.py              # UEBA API
+│   │   ├── risk.py              # 风险评分 API
+│   │   ├── playbooks.py         # 处置剧本 API
+│   │   ├── knowledge_base.py     # 知识库 API
+│   │   ├── ai_reports.py        # AI 报告 API
+│   │   ├── export.py            # 导出 API
+│   │   ├── pam_integration.py   # PAM 集成 API
+│   │   ├── review_reminders.py  # 审查提醒 API
+│   │   ├── schedules.py         # 调度 API
+│   │   ├── users.py             # 用户管理 API
 │   │
-│   ├── services/
-│   │   ├── scan_scheduler.py     # 扫描调度服务
-│   │   ├── threat_analyzer.py    # 威胁分析服务
-│   │   ├── alert_engine.py       # 告警引擎
-│   │   ├── realtime_monitor.py   # 实时监控服务
-│   │   ├── lifecycle_service.py  # 账号生命周期服务
-│   │   ├── compliance_service.py # 合规评估服务
-│   │   ├── attck_mapper.py       # ATT&CK 映射服务
-│   │   └── nhi_service.py        # NHI 服务
-│   │
-│   ├── scanners/
-│   │   ├── base.py               # 扫描器基类
-│   │   ├── ssh_scanner.py        # SSH 扫描器
-│   │   ├── wmi_scanner.py        # WMI 扫描器
-│   │   ├── cloud_scanner.py      # 云 IAM 扫描器
-│   │   ├── pam_scanner.py        # PAM 扫描器
-│   │   └── db_scanner.py         # 数据库扫描器
-│   │
-│   ├── models/                   # SQLAlchemy ORM 模型
-│   │   ├── asset.py
-│   │   ├── account.py
-│   │   ├── scan.py
-│   │   ├── signal.py
-│   │   ├── alert.py
-│   │   └── ...
+├── services/
+│   ├── ssh_scanner.py           # SSH 扫描器
+│   ├── diff_engine.py           # 差异比对引擎
+│   ├── risk_scorer.py          # 风险评分服务
+│   └── ...
 │   │
 │   ├── schemas/                  # Pydantic 请求/响应模型
 │   │   ├── asset.py

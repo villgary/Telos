@@ -1,8 +1,8 @@
 # Telos API 参考文档
 # Telos API Reference
 
-> **文档版本 / API Version**: v2.0
-> **Base URL**: `https://your-telos-domain.com/api/v2`
+> **文档版本 / API Version**: v1.0
+> **Base URL**: `https://your-telos-domain.com/api/v1`
 > **认证方式 / Authentication**: Bearer Token (JWT)
 > **格式 / Format**: JSON
 
@@ -36,7 +36,7 @@ Telos API 使用 JWT Bearer Token 认证。
 **步骤 1：获取访问令牌 / Step 1: Obtain Access Token**
 
 ```
-POST /api/v2/auth/login
+POST /api/v1/auth/login
 Content-Type: application/json
 
 {
@@ -64,14 +64,14 @@ Authorization: Bearer <access_token>
 ### 1.2 令牌刷新 / Token Refresh
 
 ```
-POST /api/v2/auth/refresh
+POST /api/v1/auth/refresh
 Authorization: Bearer <access_token>
 ```
 
 ### 1.3 登出 / Logout
 
 ```
-POST /api/v2/auth/logout
+POST /api/v1/auth/logout
 Authorization: Bearer <access_token>
 ```
 
@@ -146,12 +146,12 @@ Authorization: Bearer <access_token>
 
 ## 3. 资产 API / Assets API
 
-**端点前缀 / Base Path:** `/api/v2/assets`
+**端点前缀 / Base Path:** `/api/v1/assets`
 
 ### 3.1 资产列表 / List Assets
 
 ```
-GET /api/v2/assets
+GET /api/v1/assets
 ```
 
 **请求参数 / Request Parameters:**
@@ -199,7 +199,7 @@ GET /api/v2/assets
 ### 3.2 获取单个资产 / Get Asset
 
 ```
-GET /api/v2/assets/{id}
+GET /api/v1/assets/{id}
 ```
 
 **响应 / Response:**
@@ -236,7 +236,7 @@ GET /api/v2/assets/{id}
 ### 3.3 创建资产 / Create Asset
 
 ```
-POST /api/v2/assets
+POST /api/v1/assets
 ```
 
 **请求体 / Request Body:**
@@ -270,7 +270,7 @@ POST /api/v2/assets
 ### 3.4 更新资产 / Update Asset
 
 ```
-PUT /api/v2/assets/{id}
+PUT /api/v1/assets/{id}
 ```
 
 请求体同创建接口，仅包含需要修改的字段。
@@ -278,7 +278,7 @@ PUT /api/v2/assets/{id}
 ### 3.5 删除资产 / Delete Asset
 
 ```
-DELETE /api/v2/assets/{id}
+DELETE /api/v1/assets/{id}
 ```
 
 **查询参数 / Query Parameters:**
@@ -290,7 +290,7 @@ DELETE /api/v2/assets/{id}
 ### 3.6 测试连接 / Test Connection
 
 ```
-POST /api/v2/assets/{id}/test-connection
+POST /api/v1/assets/{id}/test-connection
 ```
 
 **响应 / Response:**
@@ -311,7 +311,7 @@ POST /api/v2/assets/{id}/test-connection
 ### 3.7 资产账号列表 / Get Asset Accounts
 
 ```
-GET /api/v2/assets/{id}/accounts
+GET /api/v1/assets/{id}/accounts
 ```
 
 **响应 / Response:**
@@ -351,12 +351,12 @@ GET /api/v2/assets/{id}/accounts
 
 ## 4. 扫描作业 API / Scans API
 
-**端点前缀 / Base Path:** `/api/v2/scans`
+**端点前缀 / Base Path:** `/api/v1/scans`
 
 ### 4.1 扫描任务列表 / List Scan Jobs
 
 ```
-GET /api/v2/scans
+GET /api/v1/scans
 ```
 
 **查询参数 / Query Parameters:**
@@ -370,7 +370,7 @@ GET /api/v2/scans
 ### 4.2 创建扫描任务 / Create Scan Job
 
 ```
-POST /api/v2/scans
+POST /api/v1/scans
 ```
 
 **请求体 / Request Body:**
@@ -420,19 +420,19 @@ POST /api/v2/scans
 ### 4.3 获取扫描详情 / Get Scan Job Detail
 
 ```
-GET /api/v2/scans/{id}
+GET /api/v1/scans/{id}
 ```
 
 ### 4.4 取消扫描 / Cancel Scan
 
 ```
-POST /api/v2/scans/{id}/cancel
+POST /api/v1/scans/{id}/cancel
 ```
 
 ### 4.5 扫描 Diff 对比 / Scan Diff
 
 ```
-GET /api/v2/scans/diff
+GET /api/v1/scans/diff
 ```
 
 **查询参数 / Query Parameters:**
@@ -495,13 +495,13 @@ GET /api/v2/scans/diff
 #### 列表 / List Schedules
 
 ```
-GET /api/v2/scans/schedules
+GET /api/v1/scans/schedules
 ```
 
 #### 创建定时扫描 / Create Schedule
 
 ```
-POST /api/v2/scans/schedules
+POST /api/v1/scans/schedules
 ```
 
 ```json
@@ -518,25 +518,25 @@ POST /api/v2/scans/schedules
 #### 更新定时扫描 / Update Schedule
 
 ```
-PUT /api/v2/scans/schedules/{id}
+PUT /api/v1/scans/schedules/{id}
 ```
 
 #### 删除定时扫描 / Delete Schedule
 
 ```
-DELETE /api/v2/scans/schedules/{id}
+DELETE /api/v1/scans/schedules/{id}
 ```
 
 ---
 
 ## 5. 身份威胁分析 API / Analysis API
 
-**端点前缀 / Base Path:** `/api/v2/analysis`
+**端点前缀 / Base Path:** `/api/v1/analysis`
 
 ### 5.1 触发分析 / Trigger Analysis
 
 ```
-POST /api/v2/analysis
+POST /api/v1/analysis
 ```
 
 **请求体 / Request Body:**
@@ -584,7 +584,7 @@ POST /api/v2/analysis
 ### 5.2 获取分析结果 / Get Analysis Result
 
 ```
-GET /api/v2/analysis/{id}
+GET /api/v1/analysis/{id}
 ```
 
 **响应 / Response:**
@@ -623,7 +623,7 @@ GET /api/v2/analysis/{id}
 ### 5.3 获取威胁信号列表 / List Threat Signals
 
 ```
-GET /api/v2/analysis/{id}/signals
+GET /api/v1/analysis/{id}/signals
 ```
 
 **查询参数 / Query Parameters:**
@@ -671,7 +671,7 @@ GET /api/v2/analysis/{id}/signals
 ### 5.4 攻击路径模拟 / Attack Path Simulation
 
 ```
-POST /api/v2/analysis/{id}/simulate
+POST /api/v1/analysis/{id}/simulate
 ```
 
 **请求体 / Request Body:**
@@ -715,12 +715,12 @@ POST /api/v2/analysis/{id}/simulate
 
 ## 6. ATT&CK 覆盖率 API / ATT&CK Coverage API
 
-**端点前缀 / Base Path:** `/api/v2/attck`
+**端点前缀 / Base Path:** `/api/v1/attck`
 
 ### 6.1 覆盖率概览 / Coverage Overview
 
 ```
-GET /api/v2/attck/coverage
+GET /api/v1/attck/coverage
 ```
 
 **查询参数 / Query Parameters:**
@@ -767,7 +767,7 @@ GET /api/v2/attck/coverage
 ### 6.2 导出 Navigator Layer / Export Navigator Layer
 
 ```
-GET /api/v2/attck/coverage/export
+GET /api/v1/attck/coverage/export
 ```
 
 **查询参数 / Query Parameters:**
@@ -784,12 +784,12 @@ GET /api/v2/attck/coverage/export
 
 ## 7. 告警 API / Alerts API
 
-**端点前缀 / Base Path:** `/api/v2/alerts`
+**端点前缀 / Base Path:** `/api/v1/alerts`
 
 ### 7.1 告警列表 / List Alerts
 
 ```
-GET /api/v2/alerts
+GET /api/v1/alerts
 ```
 
 **查询参数 / Query Parameters:**
@@ -806,7 +806,7 @@ GET /api/v2/alerts
 ### 7.2 获取告警详情 / Get Alert Detail
 
 ```
-GET /api/v2/alerts/{id}
+GET /api/v1/alerts/{id}
 ```
 
 **响应 / Response:**
@@ -840,13 +840,13 @@ GET /api/v2/alerts/{id}
 ### 7.3 确认告警 / Acknowledge Alert
 
 ```
-POST /api/v2/alerts/{id}/acknowledge
+POST /api/v1/alerts/{id}/acknowledge
 ```
 
 ### 7.4 响应告警 / Respond to Alert
 
 ```
-POST /api/v2/alerts/{id}/respond
+POST /api/v1/alerts/{id}/respond
 ```
 
 ```json
@@ -859,7 +859,7 @@ POST /api/v2/alerts/{id}/respond
 ### 7.5 驳回告警 / Dismiss Alert
 
 ```
-POST /api/v2/alerts/{id}/dismiss
+POST /api/v1/alerts/{id}/dismiss
 ```
 
 ```json
@@ -871,7 +871,7 @@ POST /api/v2/alerts/{id}/dismiss
 ### 7.6 告警统计 / Alert Statistics
 
 ```
-GET /api/v2/alerts/stats
+GET /api/v1/alerts/stats
 ```
 
 **查询参数 / Query Parameters:**
@@ -903,12 +903,12 @@ GET /api/v2/alerts/stats
 
 ## 8. NHI API
 
-**端点前缀 / Base Path:** `/api/v2/nhi`
+**端点前缀 / Base Path:** `/api/v1/nhi`
 
 ### 8.1 NHI 列表 / List NHI
 
 ```
-GET /api/v2/nhi
+GET /api/v1/nhi
 ```
 
 **查询参数 / Query Parameters:**
@@ -922,7 +922,7 @@ GET /api/v2/nhi
 ### 8.2 NHI 仪表板 / NHI Dashboard
 
 ```
-GET /api/v2/nhi/dashboard
+GET /api/v1/nhi/dashboard
 ```
 
 **响应 / Response:**
@@ -969,7 +969,7 @@ GET /api/v2/nhi/dashboard
 ### 8.3 分配归属人 / Assign Owner
 
 ```
-POST /api/v2/nhi/{id}/assign-owner
+POST /api/v1/nhi/{id}/assign-owner
 ```
 
 ```json
@@ -981,7 +981,7 @@ POST /api/v2/nhi/{id}/assign-owner
 ### 8.4 创建 NHI 记录 / Create NHI Record
 
 ```
-POST /api/v2/nhi
+POST /api/v1/nhi
 ```
 
 ```json
@@ -1001,12 +1001,12 @@ POST /api/v2/nhi
 
 ## 9. 账号生命周期 API / Account Lifecycle API
 
-**端点前缀 / Base Path:** `/api/v2/lifecycle`
+**端点前缀 / Base Path:** `/api/v1/lifecycle`
 
 ### 9.1 账号状态列表 / List Account Lifecycle Status
 
 ```
-GET /api/v2/lifecycle/accounts
+GET /api/v1/lifecycle/accounts
 ```
 
 **查询参数 / Query Parameters:**
@@ -1020,7 +1020,7 @@ GET /api/v2/lifecycle/accounts
 ### 9.2 状态统计 / Status Statistics
 
 ```
-GET /api/v2/lifecycle/stats
+GET /api/v1/lifecycle/stats
 ```
 
 **响应 / Response:**
@@ -1048,7 +1048,7 @@ GET /api/v2/lifecycle/stats
 ### 9.3 配置生命周期阈值 / Configure Lifecycle Thresholds
 
 ```
-PUT /api/v2/lifecycle/settings
+PUT /api/v1/lifecycle/settings
 ```
 
 ```json
@@ -1073,19 +1073,19 @@ PUT /api/v2/lifecycle/settings
 ### 9.4 账号状态历史 / Account Status History
 
 ```
-GET /api/v2/lifecycle/accounts/{id}/history
+GET /api/v1/lifecycle/accounts/{id}/history
 ```
 
 ---
 
 ## 10. 合规评估 API / Compliance API
 
-**端点前缀 / Base Path:** `/api/v2/compliance`
+**端点前缀 / Base Path:** `/api/v1/compliance`
 
 ### 10.1 执行合规评估 / Run Compliance Assessment
 
 ```
-POST /api/v2/compliance/assess
+POST /api/v1/compliance/assess
 ```
 
 ```json
@@ -1104,7 +1104,7 @@ POST /api/v2/compliance/assess
 ### 10.2 获取评估结果 / Get Assessment Result
 
 ```
-GET /api/v2/compliance/assessments/{id}
+GET /api/v1/compliance/assessments/{id}
 ```
 
 **响应 / Response:**
@@ -1147,7 +1147,7 @@ GET /api/v2/compliance/assessments/{id}
 ### 10.3 合规报告导出 / Export Compliance Report
 
 ```
-GET /api/v2/compliance/assessments/{id}/export
+GET /api/v1/compliance/assessments/{id}/export
 ```
 
 **查询参数 / Query Parameters:**
@@ -1160,18 +1160,18 @@ GET /api/v2/compliance/assessments/{id}/export
 
 ## 11. 策略管理 API / Policies API
 
-**端点前缀 / Base Path:** `/api/v2/policies`
+**端点前缀 / Base Path:** `/api/v1/policies`
 
 ### 11.1 策略列表 / List Policies
 
 ```
-GET /api/v2/policies
+GET /api/v1/policies
 ```
 
 ### 11.2 创建策略 / Create Policy
 
 ```
-POST /api/v2/policies
+POST /api/v1/policies
 ```
 
 ```json
@@ -1188,7 +1188,7 @@ POST /api/v2/policies
 ### 11.3 评估策略 / Evaluate Policy
 
 ```
-POST /api/v2/policies/{id}/evaluate
+POST /api/v1/policies/{id}/evaluate
 ```
 
 ```json
@@ -1201,25 +1201,25 @@ POST /api/v2/policies/{id}/evaluate
 ### 11.4 获取策略评估结果 / Get Policy Evaluation Result
 
 ```
-GET /api/v2/policies/{id}/evaluations/{eval_id}
+GET /api/v1/policies/{id}/evaluations/{eval_id}
 ```
 
 ---
 
 ## 12. 用户管理 API / Users API
 
-**端点前缀 / Base Path:** `/api/v2/users`
+**端点前缀 / Base Path:** `/api/v1/users`
 
 ### 12.1 用户列表 / List Users
 
 ```
-GET /api/v2/users
+GET /api/v1/users
 ```
 
 ### 12.2 创建用户 / Create User
 
 ```
-POST /api/v2/users
+POST /api/v1/users
 ```
 
 ```json
@@ -1236,7 +1236,7 @@ POST /api/v2/users
 ### 12.3 修改密码 / Change Password
 
 ```
-POST /api/v2/users/{id}/change-password
+POST /api/v1/users/{id}/change-password
 ```
 
 ```json
@@ -1249,7 +1249,7 @@ POST /api/v2/users/{id}/change-password
 ### 12.4 重置密码（管理员） / Reset Password (Admin)
 
 ```
-POST /api/v2/users/{id}/reset-password
+POST /api/v1/users/{id}/reset-password
 ```
 
 ---
@@ -1259,7 +1259,7 @@ POST /api/v2/users/{id}/reset-password
 ### 13.1 注册 Webhook / Register Webhook
 
 ```
-POST /api/v2/webhooks
+POST /api/v1/webhooks
 ```
 
 ```json
@@ -1365,9 +1365,9 @@ X-Telos-Signature: sha256=abc123...
 ## 附录 A：OpenAPI 规范下载 / Appendix A: OpenAPI Spec Download
 
 ```
-GET /api/v2/openapi.json  → OpenAPI 3.0 JSON 规范
-GET /api/v2/redoc         → ReDoc API 文档
-GET /api/v2/swagger       → Swagger UI
+GET /api/v1/openapi.json  → OpenAPI 3.0 JSON 规范
+GET /api/v1/redoc         → ReDoc API 文档
+GET /api/v1/swagger       → Swagger UI
 ```
 
 ---
