@@ -7,7 +7,7 @@ export default defineConfig({
     timeout: 10000,
   },
   use: {
-    baseURL: 'http://192.168.1.9',
+    baseURL: 'http://192.168.1.10',
     actionTimeout: 15000,
   },
   launchOptions: {

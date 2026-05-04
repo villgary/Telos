@@ -18,14 +18,14 @@ async function assertNoI18nLeaks(page: Page) {
 // Helper to navigate in the SPA without triggering nginx /assets/ redirect
 async function navigateTo(page: Page, path: string) {
   // Try to go to home — if session expired we'll be redirected to /login
-  await page.goto('http://192.168.1.9/', { waitUntil: 'domcontentloaded' })
+  await page.goto('http://192.168.1.10/', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(2000) // Allow redirect to /login to complete if session expired
   // If redirected to login, log in
   if (page.url().includes('/login')) {
     await page.locator('#username').fill('admin')
     await page.locator('#password').fill('Admin123!')
     await page.locator('button[type="submit"]').click()
-    await page.waitForURL('http://192.168.1.9/', { timeout: 30000 }).catch(() => {})
+    await page.waitForURL('http://192.168.1.10/', { timeout: 30000 }).catch(() => {})
     await page.waitForLoadState('networkidle')
   }
   // Navigate to target path via pushState
@@ -50,11 +50,11 @@ async function waitForReady(page: Page) {
 }
 
 test('asset groups - page loads (data-independent)', async ({ page }) => {
-  await page.goto('http://192.168.1.9/login', { waitUntil: 'networkidle' })
+  await page.goto('http://192.168.1.10/login', { waitUntil: 'networkidle' })
   await page.locator('#username').fill('admin')
   await page.locator('#password').fill('Admin123!')
   await page.locator('button[type="submit"]').click()
-  await page.waitForURL('http://192.168.1.9/', { timeout: 15000 }).catch(() => {})
+  await page.waitForURL('http://192.168.1.10/', { timeout: 15000 }).catch(() => {})
 
   await navigateTo(page, '/asset-groups')
   await waitForReady(page)
@@ -66,11 +66,11 @@ test('asset groups - page loads (data-independent)', async ({ page }) => {
 })
 
 test('assets page - cascader opens and has no i18n leaks', async ({ page }) => {
-  await page.goto('http://192.168.1.9/login', { waitUntil: 'networkidle' })
+  await page.goto('http://192.168.1.10/login', { waitUntil: 'networkidle' })
   await page.locator('#username').fill('admin')
   await page.locator('#password').fill('Admin123!')
   await page.locator('button[type="submit"]').click()
-  await page.waitForURL('http://192.168.1.9/', { timeout: 15000 }).catch(() => {})
+  await page.waitForURL('http://192.168.1.10/', { timeout: 15000 }).catch(() => {})
 
   await navigateTo(page, '/assets')
   await waitForReady(page)
@@ -89,11 +89,11 @@ test('assets page - cascader opens and has no i18n leaks', async ({ page }) => {
 
 test('asset categories - tree view loads and add drawer has no i18n leaks', async ({ page }) => {
   test.slow()
-  await page.goto('http://192.168.1.9/login', { waitUntil: 'networkidle' })
+  await page.goto('http://192.168.1.10/login', { waitUntil: 'networkidle' })
   await page.locator('#username').fill('admin')
   await page.locator('#password').fill('Admin123!')
   await page.locator('button[type="submit"]').click()
-  await page.waitForURL('http://192.168.1.9/', { timeout: 15000 }).catch(() => {})
+  await page.waitForURL('http://192.168.1.10/', { timeout: 15000 }).catch(() => {})
 
   await navigateTo(page, '/asset-categories')
   await waitForReady(page)

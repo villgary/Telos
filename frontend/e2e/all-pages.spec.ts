@@ -23,7 +23,7 @@ async function assertNoI18nLeaks(page: Page) {
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 async function login(page: Page) {
-  await page.goto('http://192.168.1.9/login', { waitUntil: 'networkidle' })
+  await page.goto('http://192.168.1.10/login', { waitUntil: 'networkidle' })
   // Set zh-CN locale before React initializes (prevent English leakage from i18n.spec.ts)
   await page.evaluate(() => {
     localStorage.setItem('language', 'zh-CN')
@@ -37,7 +37,7 @@ async function login(page: Page) {
   await page.locator('button[type="submit"]').click()
   // Wait for redirect to home and dashboard content to appear
   await page.waitForFunction(
-    () => document.URL === 'http://192.168.1.9/' &&
+    () => document.URL === 'http://192.168.1.10/' &&
          (document.querySelector('.ant-layout-sider') !== null ||
           document.querySelector('.ant-menu') !== null),
     { timeout: 30000 }
@@ -54,7 +54,7 @@ async function login(page: Page) {
 
 async function navigate(page: Page, path: string) {
   // Start with login page to reliably detect session state
-  await page.goto('http://192.168.1.9/login', { waitUntil: 'domcontentloaded' })
+  await page.goto('http://192.168.1.10/login', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(500)
   // Check if we need to log in (might be already logged in from context)
   const usernameField = page.getByRole('textbox', { name: /用户名|username/i })
@@ -67,7 +67,7 @@ async function navigate(page: Page, path: string) {
       () => {
         return document.querySelector('.ant-layout-sider') !== null ||
                document.querySelector('.ant-menu') !== null ||
-               document.URL === 'http://192.168.1.9/'
+               document.URL === 'http://192.168.1.10/'
       },
       { timeout: 30000 }
     ).catch(() => {})
@@ -122,7 +122,7 @@ async function waitForPageReady(page: Page) {
 // ─── Login ─────────────────────────────────────────────────────────────────────
 
 test('login page renders and accepts credentials', async ({ page }) => {
-  await page.goto('http://192.168.1.9/login', { waitUntil: 'networkidle' })
+  await page.goto('http://192.168.1.10/login', { waitUntil: 'networkidle' })
   await page.waitForSelector('.ant-form', { timeout: 15000 })
   const userInput = page.getByRole('textbox', { name: /用户名|username/i })
   const passInput = page.getByRole('textbox', { name: /密码|password/i })
@@ -131,8 +131,8 @@ test('login page renders and accepts credentials', async ({ page }) => {
   await userInput.fill('admin')
   await passInput.fill('Admin123!')
   await page.locator('button[type="submit"]').click()
-  await page.waitForURL('http://192.168.1.9/', { timeout: 15000 })
-  expect(page.url()).toBe('http://192.168.1.9/')
+  await page.waitForURL('http://192.168.1.10/', { timeout: 15000 })
+  expect(page.url()).toBe('http://192.168.1.10/')
 })
 
 // ─── Dashboard ─────────────────────────────────────────────────────────────────

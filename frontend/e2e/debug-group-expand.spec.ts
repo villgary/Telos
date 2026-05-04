@@ -10,14 +10,14 @@ test('debug: check network requests when expanding group', async ({ page }) => {
   })
 
   // Login
-  await page.goto('http://192.168.1.9/login', { waitUntil: 'networkidle' })
+  await page.goto('http://192.168.1.10/login', { waitUntil: 'networkidle' })
   await page.locator('#username').fill('admin')
   await page.locator('#password').fill('Admin123!')
   await page.locator('button[type="submit"]').click()
-  await page.waitForURL('http://192.168.1.9/', { timeout: 10000 })
+  await page.waitForURL('http://192.168.1.10/', { timeout: 10000 })
 
   // Go to asset groups
-  await page.goto('http://192.168.1.9/asset-groups')
+  await page.goto('http://192.168.1.10/asset-groups')
   await page.waitForLoadState('networkidle')
   await page.waitForSelector('.ant-table-tbody .ant-table-row', { timeout: 15000 })
 

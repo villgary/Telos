@@ -2,15 +2,15 @@ import { test, expect } from '@playwright/test'
 
 test('assets page shows correct OS types and untested status', async ({ page }) => {
   // Login
-  await page.goto('http://192.168.1.9/login', { waitUntil: 'networkidle' })
+  await page.goto('http://192.168.1.10/login', { waitUntil: 'networkidle' })
   await page.locator('#username').fill('admin')
   await page.locator('#password').fill('Admin123!')
   await page.locator('button[type="submit"]').click()
-  await page.waitForURL('http://192.168.1.9/', { timeout: 10000 })
+  await page.waitForURL('http://192.168.1.10/', { timeout: 10000 })
   console.log('Logged in')
   
   // Navigate to assets page
-  await page.goto('http://192.168.1.9/assets')
+  await page.goto('http://192.168.1.10/assets')
   await page.waitForSelector('.ant-table-row', { timeout: 10000 })
   
   const rows = await page.locator('.ant-table-row').all()

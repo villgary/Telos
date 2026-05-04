@@ -1,6 +1,6 @@
 import { test, expect, chromium, Browser, Page } from '@playwright/test'
 
-const BASE = process.env.BASE_URL || 'http://192.168.1.9'
+const BASE = process.env.BASE_URL || 'http://192.168.1.10'
 const USERNAME = 'admin'
 const PASSWORD = 'Admin123!'
 
