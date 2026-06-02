@@ -120,7 +120,8 @@ from backend.schemas.threat import (
 from backend.schemas.nhi import (
     NHITypeLiteral, NHILevelLiteral,
     NHIIdentityResponse, NHIInventoryResponse,
-    NHIAlertResponse, NHIDashboardResponse, NHIPolicyResponse,
+    NHIAlertResponse, NHIDashboardResponse,
+    NHIPolicyCreate, NHIPolicyResponse,
 )
 
 # ── Error schemas ─────────────────────────────────────────────────────

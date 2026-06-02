@@ -241,7 +241,6 @@
   "status.normal": "普通",
   "status.partialSuccess": "部分成功",
   "status.cancelled": "已取消",
-
   "subtype.title": "子类型管理",
   "subtype.subtitle": "管理网络厂商、IoT类型、数据库类型和操作系统类型",
   "subtype.networkVendor": "网络厂商",
@@ -286,7 +285,6 @@
   "subtype.form.namePlaceholder": "例如：Palo Alto",
   "subtype.form.slugPlaceholder": "例如：palo_alto",
   "subtype.form.sortOrderPlaceholder": "0",
-
   "btn.add": "新增",
   "btn.addAsset": "添加资产",
   "btn.addSubType": "添加子类型",
@@ -1815,14 +1813,12 @@
   "attck.tech.T1550.003": "Unix 远程 Shell",
   "attck.riskSummaryHeader": "当前分析",
   "attck.totalScore": "总分",
-  "attck.signalCountN": "{{n}} 条信号",
   "attck.affectedAccounts": "影响账号",
   "attck.andMore": "等 {{n}} 个",
   "attck.level.critical": "严重",
   "attck.level.high": "高危",
   "attck.level.medium": "中危",
   "attck.level.low": "低危",
-
   "alert.admin_privilege_added": "「{{username}}」新增管理权限",
   "alert.msg.admin_privilege_added": "资产 #{{asset_id}} 上的账号「{{username}}」在本次扫描中变为管理员权限，请确认是否经授权。",
   "alert.nopasswd_sudo_added": "「{{username}}」新增 NOPASSWD sudo 权限",
@@ -1832,5 +1828,43 @@
   "alert.dormant_reactivated": "休眠账号「{{username}}」重新激活",
   "alert.msg.dormant_reactivated": "账号「{{username}}」(资产 #{{asset_id}}) 之前状态为 {{lifecycle_status}}，最近登录时间 {{last_login}}，请确认为正常业务行为。",
   "alert.orphan_account": "孤儿特权账号「{{username}}」",
-  "alert.msg.orphan_account": "资产 #{{asset_id}} 账号「{{username}}」(UID={{uid_sid}}) 为特权账号但无关联人员身份，可能为影子账号，请立即确认归属。"
+  "alert.msg.orphan_account": "资产 #{{asset_id}} 账号「{{username}}」(UID={{uid_sid}}) 为特权账号但无关联人员身份，可能为影子账号，请立即确认归属。",
+  "nhi": {
+    "alert": {
+      "privilege_escalation": {
+        "title": "权限提升: {{username}}",
+        "message": "{{username}} 在 {{asset_code}} 上升级为管理员（先前快照中为非管理员）"
+      },
+      "nopasswd_sudo": {
+        "title": "免密sudo: {{username}}",
+        "message": "账户 {{username}} 在 {{asset_code}} 上配置了免密 sudo"
+      },
+      "credential_leak": {
+        "title": "凭据泄露: {{username}}",
+        "message": "账户 {{username}} 存在 {{file_count}} 个严重凭据泄露"
+      },
+      "cross_asset_spread": {
+        "title": "跨资产扩散: {{username}}",
+        "message": "同一 NHI 在最近 {{window_days}} 天内出现于 {{asset_count}} 个资产"
+      },
+      "risk_alert": {
+        "title": "NHI风险: {{username}}",
+        "message": "非人类身份 {{username}} 风险等级 {{level}}，评分 {{score}}"
+      },
+      "no_owner": {
+        "title": "NHI无Owner: {{username}}",
+        "message": "非人类身份 {{username}} 未分配 Owner"
+      }
+    },
+    "alert_type": {
+      "privilege_escalation": "权限提升",
+      "nopasswd_sudo": "免密sudo",
+      "credential_leak": "凭据泄露",
+      "cross_asset_spread": "跨资产扩散",
+      "risk_alert": "风险告警",
+      "no_owner": "无Owner"
+    }
+  },
+  "nhi.filterAlertType": "按告警类型筛选",
+  "nhi.assets": "资产"
 }

@@ -216,6 +216,29 @@ def _seed_default_playbooks(db):
     logger.info("seeded-default-playbooks", count=len(defaults))
 
 
+def _seed_default_nhi_policies(db) -> None:
+    """Insert a default global NHIPolicy if the table is empty."""
+    from backend import models  # local import to avoid circulars at module load
+    if db.query(models.NHIPolicy).count() > 0:
+        return
+    default_types = [
+        "privilege_escalation", "nopasswd_sudo", "credential_leak", "cross_asset_spread",
+    ]
+    db.add(models.NHIPolicy(
+        name="default-global",
+        description="Default global NHI policy. Created automatically at startup.",
+        nhi_type=None,
+        enabled_alert_types=default_types,
+        cross_asset_threshold=3,
+        cross_asset_window_days=7,
+        require_owner=True,
+        require_monitoring=False,
+        enabled=True,
+    ))
+    db.commit()
+    logger.info("seeded-default-nhi-policy", count=1)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("accountscan-starting", version="2.0.0")
@@ -227,6 +250,7 @@ async def lifespan(app: FastAPI):
         _seed_asset_categories(db)
         _seed_default_policies(db)
         _seed_default_playbooks(db)
+        _seed_default_nhi_policies(db)
     finally:
         db.close()
     scheduler_service.start_scheduler()

@@ -16,6 +16,7 @@ from backend.schemas import (
     NHIInventoryResponse,
     NHIAlertResponse,
     NHIDashboardResponse,
+    NHIPolicyCreate,
     NHIPolicyResponse,
 )
 from backend.services.nhi_analyzer import NHIAnalyzer
@@ -33,6 +34,10 @@ def _alert_to_response(alert: models.NHIAlert) -> NHIAlertResponse:
     return NHIAlertResponse(
         id=alert.id,
         nhi_id=alert.nhi_id,
+        cluster_key=alert.cluster_key,
+        nhi_username=alert.nhi_username or (nhi.username if nhi else None),
+        nhi_type=alert.nhi_type or (nhi.nhi_type if nhi else None),
+        asset_count=alert.asset_count,
         alert_type=alert.alert_type,
         level=alert.level,
         title=alert.title,
@@ -41,9 +46,7 @@ def _alert_to_response(alert: models.NHIAlert) -> NHIAlertResponse:
         status=alert.status,
         resolved_at=alert.resolved_at,
         created_at=alert.created_at,
-        nhi_username=nhi.username if nhi else None,
-        nhi_type=nhi.nhi_type if nhi else None,
-        asset_code=nhi.hostname if nhi else None,
+        updated_at=alert.updated_at,
     )
 
 
@@ -205,6 +208,152 @@ def list_nhi(
     )
 
 
+# ─── Sync ───────────────────────────────────────────────────────────────────
+
+@router.post("/sync")
+def sync_nhi(
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """
+    Re-scan all account snapshots and update NHI registry.
+    Returns summary of the sync operation.
+    """
+    analyzer = NHIAnalyzer(db)
+    total, nhi_count, human_count = analyzer.sync_all()
+    alerts_created = analyzer.generate_alerts()
+
+    return {
+        "ok": True,
+        "total_snapshots_processed": total,
+        "nhi_count": nhi_count,
+        "human_count": human_count,
+        "alerts_created": alerts_created,
+    }
+
+
+# ─── Alerts ─────────────────────────────────────────────────────────────────
+
+@router.get("/alerts", response_model=list[NHIAlertResponse])
+def list_nhi_alerts(
+    level: Annotated[str | None, Query(description="Filter by alert level")] = None,
+    status_filter: Annotated[str | None, Query(alias="status", description="Filter by status")] = None,
+    alert_type: Annotated[str | None, Query(description="Filter by alert type")] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """List NHI-specific alerts."""
+    query = db.query(models.NHIAlert)
+    if level:
+        query = query.filter(models.NHIAlert.level == level)
+    if status_filter:
+        query = query.filter(models.NHIAlert.status == status_filter)
+    if alert_type:
+        query = query.filter(models.NHIAlert.alert_type == alert_type)
+    alerts = query.order_by(
+        models.NHIAlert.created_at.desc()
+    ).offset(offset).limit(limit).all()
+    return [_alert_to_response(a) for a in alerts]
+
+
+@router.patch("/alerts/{alert_id}/acknowledge")
+def acknowledge_nhi_alert(
+    alert_id: int,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """Mark NHI alert as acknowledged."""
+    alert = db.query(models.NHIAlert).filter(
+        models.NHIAlert.id == alert_id
+    ).first()
+    if not alert:
+        raise HTTPException(404, "Alert not found")
+    alert.is_read = True
+    alert.status = "acknowledged"
+    db.commit()
+    return {"ok": True}
+
+
+@router.patch("/alerts/{alert_id}/resolve")
+def resolve_nhi_alert(
+    alert_id: int,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """Mark NHI alert as resolved."""
+    alert = db.query(models.NHIAlert).filter(
+        models.NHIAlert.id == alert_id
+    ).first()
+    if not alert:
+        raise HTTPException(404, "Alert not found")
+    alert.status = "resolved"
+    alert.resolved_at = datetime.now(timezone.utc)
+    alert.resolved_by = user.id
+    alert.is_read = True
+    db.commit()
+    return {"ok": True}
+
+
+# ─── Policies ────────────────────────────────────────────────────────────────
+
+@router.get("/policies", response_model=list[NHIPolicyResponse])
+def list_nhi_policies(
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """List all NHI governance policies."""
+    policies = db.query(models.NHIPolicy).all()
+    return [NHIPolicyResponse.model_validate(p) for p in policies]
+
+
+@router.post("/policies", response_model=NHIPolicyResponse, status_code=status.HTTP_201_CREATED)
+def create_nhi_policy(
+    body: NHIPolicyCreate,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """Create a new NHI governance policy."""
+    policy = models.NHIPolicy(
+        name=body.name,
+        description=body.description,
+        nhi_type=body.nhi_type,
+        severity_filter=body.severity_filter,
+        rotation_days=body.rotation_days,
+        alert_threshold_days=body.alert_threshold_days,
+        require_owner=body.require_owner,
+        require_monitoring=body.require_monitoring,
+        enabled_alert_types=body.enabled_alert_types,
+        cross_asset_threshold=body.cross_asset_threshold,
+        cross_asset_window_days=body.cross_asset_window_days,
+        enabled=body.enabled,
+        created_by=user.id,
+    )
+    db.add(policy)
+    db.commit()
+    db.refresh(policy)
+    return NHIPolicyResponse.model_validate(policy)
+
+
+@router.delete("/policies/{policy_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_nhi_policy(
+    policy_id: int,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """Delete an NHI policy."""
+    policy = db.query(models.NHIPolicy).filter(
+        models.NHIPolicy.id == policy_id
+    ).first()
+    if not policy:
+        raise HTTPException(404, "Policy not found")
+    db.delete(policy)
+    db.commit()
+
+
+# ─── Single-record routes (must come last so /{nhi_id} doesn't shadow /alerts, /policies, /sync) ──
+
 @router.get("/{nhi_id}", response_model=NHIIdentityResponse)
 def get_nhi(
     nhi_id: int,
@@ -264,141 +413,3 @@ def toggle_nhi_monitoring(
     nhi.is_monitored = enabled
     db.commit()
     return {"ok": True, "is_monitored": enabled}
-
-
-# ─── Sync ───────────────────────────────────────────────────────────────────
-
-@router.post("/sync")
-def sync_nhi(
-    db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
-):
-    """
-    Re-scan all account snapshots and update NHI registry.
-    Returns summary of the sync operation.
-    """
-    analyzer = NHIAnalyzer(db)
-    total, nhi_count, human_count = analyzer.sync_all()
-    alerts_created = analyzer.generate_alerts()
-
-    return {
-        "ok": True,
-        "total_snapshots_processed": total,
-        "nhi_count": nhi_count,
-        "human_count": human_count,
-        "alerts_created": alerts_created,
-    }
-
-
-# ─── Alerts ─────────────────────────────────────────────────────────────────
-
-@router.get("/alerts", response_model=list[NHIAlertResponse])
-def list_nhi_alerts(
-    level: Annotated[str | None, Query(description="Filter by alert level")] = None,
-    status_filter: Annotated[str | None, Query(alias="status", description="Filter by status")] = None,
-    limit: Annotated[int, Query(ge=1, le=200)] = 50,
-    offset: Annotated[int, Query(ge=0)] = 0,
-    db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
-):
-    """List NHI-specific alerts."""
-    query = db.query(models.NHIAlert)
-    if level:
-        query = query.filter(models.NHIAlert.level == level)
-    if status_filter:
-        query = query.filter(models.NHIAlert.status == status_filter)
-    alerts = query.order_by(
-        models.NHIAlert.created_at.desc()
-    ).offset(offset).limit(limit).all()
-    return [_alert_to_response(a) for a in alerts]
-
-
-@router.patch("/alerts/{alert_id}/acknowledge")
-def acknowledge_nhi_alert(
-    alert_id: int,
-    db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
-):
-    """Mark NHI alert as acknowledged."""
-    alert = db.query(models.NHIAlert).filter(
-        models.NHIAlert.id == alert_id
-    ).first()
-    if not alert:
-        raise HTTPException(404, "Alert not found")
-    alert.is_read = True
-    alert.status = "acknowledged"
-    db.commit()
-    return {"ok": True}
-
-
-@router.patch("/alerts/{alert_id}/resolve")
-def resolve_nhi_alert(
-    alert_id: int,
-    db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
-):
-    """Mark NHI alert as resolved."""
-    alert = db.query(models.NHIAlert).filter(
-        models.NHIAlert.id == alert_id
-    ).first()
-    if not alert:
-        raise HTTPException(404, "Alert not found")
-    alert.status = "resolved"
-    alert.resolved_at = datetime.now(timezone.utc)
-    alert.resolved_by = user.id
-    alert.is_read = True
-    db.commit()
-    return {"ok": True}
-
-
-# ─── Policies ────────────────────────────────────────────────────────────────
-
-@router.get("/policies", response_model=list[NHIPolicyResponse])
-def list_nhi_policies(
-    db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
-):
-    """List all NHI governance policies."""
-    policies = db.query(models.NHIPolicy).all()
-    return [NHIPolicyResponse.model_validate(p) for p in policies]
-
-
-@router.post("/policies", response_model=NHIPolicyResponse, status_code=status.HTTP_201_CREATED)
-def create_nhi_policy(
-    body: dict,
-    db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
-):
-    """Create a new NHI governance policy."""
-    policy = models.NHIPolicy(
-        name=body.get("name"),
-        description=body.get("description"),
-        nhi_type=body.get("nhi_type"),
-        severity_filter=body.get("severity_filter"),
-        rotation_days=body.get("rotation_days"),
-        alert_threshold_days=body.get("alert_threshold_days"),
-        require_owner=body.get("require_owner", True),
-        require_monitoring=body.get("require_monitoring", False),
-        enabled=body.get("enabled", True),
-        created_by=user.id,
-    )
-    db.add(policy)
-    db.commit()
-    db.refresh(policy)
-    return NHIPolicyResponse.model_validate(policy)
-
-
-@router.delete("/policies/{policy_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_nhi_policy(
-    policy_id: int,
-    db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
-):
-    """Delete an NHI policy."""
-    policy = db.query(models.NHIPolicy).filter(
-        models.NHIPolicy.id == policy_id
-    ).first()
-    if not policy:
-        raise HTTPException(404, "Policy not found")
-    db.delete(policy)
-    db.commit()

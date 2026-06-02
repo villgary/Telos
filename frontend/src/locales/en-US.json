@@ -241,7 +241,6 @@
   "status.normal": "Normal",
   "status.partialSuccess": "Partial Success",
   "status.cancelled": "Cancelled",
-
   "subtype.title": "Sub-Types",
   "subtype.subtitle": "Manage network vendors, IoT types, database types, and OS types",
   "subtype.networkVendor": "Network Vendor",
@@ -286,7 +285,6 @@
   "subtype.form.namePlaceholder": "e.g., Palo Alto",
   "subtype.form.slugPlaceholder": "e.g., palo_alto",
   "subtype.form.sortOrderPlaceholder": "0",
-
   "btn.add": "Add",
   "btn.addAsset": "Add Asset",
   "btn.addSubType": "Add Sub-Type",
@@ -1807,14 +1805,12 @@
   "attck.tech.T1550.003": "Unix Remote Shell",
   "attck.riskSummaryHeader": "Current analysis",
   "attck.totalScore": "Total score",
-  "attck.signalCountN": "{{n}} signals",
   "attck.affectedAccounts": "Affected accounts",
   "attck.andMore": "and {{n}} more",
   "attck.level.critical": "critical",
   "attck.level.high": "high",
   "attck.level.medium": "medium",
   "attck.level.low": "low",
-
   "alert.admin_privilege_added": "{{username}} gained admin privileges",
   "alert.msg.admin_privilege_added": "Account {{username}} on Asset #{{asset_id}} gained admin privileges. Please verify authorization.",
   "alert.nopasswd_sudo_added": "{{username}} gained NOPASSWD sudo rights",
@@ -1824,5 +1820,43 @@
   "alert.dormant_reactivated": "Dormant account {{username}} reactivated",
   "alert.msg.dormant_reactivated": "Account {{username}} (Asset #{{asset_id}}) previously had lifecycle status {{lifecycle_status}}. Last login: {{last_login}}. Please verify if this is normal business activity.",
   "alert.orphan_account": "Orphan privileged account: {{username}}",
-  "alert.msg.orphan_account": "Account {{username}} on Asset #{{asset_id}} (UID={{uid_sid}}) is a privileged account with no linked identity. Possible shadow account — verify ownership immediately."
+  "alert.msg.orphan_account": "Account {{username}} on Asset #{{asset_id}} (UID={{uid_sid}}) is a privileged account with no linked identity. Possible shadow account — verify ownership immediately.",
+  "nhi": {
+    "alert": {
+      "privilege_escalation": {
+        "title": "Privilege escalation: {{username}}",
+        "message": "{{username}} escalated to admin on {{asset_code}} (was non-admin in prior snapshot)"
+      },
+      "nopasswd_sudo": {
+        "title": "NOPASSWD sudo: {{username}}",
+        "message": "Account {{username}} has NOPASSWD sudo on {{asset_code}}"
+      },
+      "credential_leak": {
+        "title": "Credential leak: {{username}}",
+        "message": "Account {{username}} has {{file_count}} critical credential findings"
+      },
+      "cross_asset_spread": {
+        "title": "Cross-asset spread: {{username}}",
+        "message": "Same NHI seen on {{asset_count}} assets in the last {{window_days}} days"
+      },
+      "risk_alert": {
+        "title": "NHI risk: {{username}}",
+        "message": "Non-human identity {{username}} risk level {{level}}, score {{score}}"
+      },
+      "no_owner": {
+        "title": "NHI unowned: {{username}}",
+        "message": "Non-human identity {{username}} has no owner assigned"
+      }
+    },
+    "alert_type": {
+      "privilege_escalation": "Privilege escalation",
+      "nopasswd_sudo": "NOPASSWD sudo",
+      "credential_leak": "Credential leak",
+      "cross_asset_spread": "Cross-asset spread",
+      "risk_alert": "Risk alert",
+      "no_owner": "No owner"
+    }
+  },
+  "nhi.filterAlertType": "Filter by alert type",
+  "nhi.assets": "assets"
 }
