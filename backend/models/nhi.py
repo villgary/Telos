@@ -45,7 +45,12 @@ class NHIAlert(Base):
     __tablename__ = "nhi_alerts"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    nhi_id = Column(Integer, ForeignKey("nhi_identities.id"), nullable=False)
+    nhi_id = Column(Integer, ForeignKey("nhi_identities.id"), nullable=True)
+    # cluster_key is String(192) to fit worst-case f"{nhi_type}:{username}" = 32+1+128 chars
+    cluster_key = Column(String(192), nullable=True, index=True)
+    nhi_username = Column(String(128), nullable=True)
+    nhi_type = Column(String(32), nullable=True)
+    asset_count = Column(Integer, nullable=True)
     alert_type = Column(String(64), nullable=False)
     level = Column(String(16), nullable=False)
     title = Column(String(256), nullable=False)
@@ -59,6 +64,7 @@ class NHIAlert(Base):
     resolved_at = Column(DateTime, nullable=True)
     resolved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     nhi = relationship("NHIIdentity")
     resolver = relationship("User")
@@ -76,6 +82,11 @@ class NHIPolicy(Base):
     alert_threshold_days = Column(Integer, nullable=True)
     require_owner = Column(Boolean, default=True)
     require_monitoring = Column(Boolean, default=False)
+    enabled_alert_types = Column(JSON, default=lambda: [
+        "privilege_escalation", "nopasswd_sudo", "credential_leak", "cross_asset_spread",
+    ])
+    cross_asset_threshold = Column(Integer, default=3)
+    cross_asset_window_days = Column(Integer, default=7)
     enabled = Column(Boolean, default=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
