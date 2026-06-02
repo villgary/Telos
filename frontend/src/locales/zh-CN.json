@@ -1652,6 +1652,7 @@
   "nhi.actions": "操作",
   "nhi.status": "状态",
   "nhi.alertType": "告警类型",
+  "nhi.alertTitle": "标题",
   "nhi.acknowledge": "确认",
   "nhi.resolve": "解决",
   "nhi.ackSuccess": "已确认",

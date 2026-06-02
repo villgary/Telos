@@ -1644,6 +1644,7 @@
   "nhi.actions": "Actions",
   "nhi.status": "Status",
   "nhi.alertType": "Alert Type",
+  "nhi.alertTitle": "Title",
   "nhi.acknowledge": "Acknowledge",
   "nhi.resolve": "Resolve",
   "nhi.ackSuccess": "Acknowledged",
