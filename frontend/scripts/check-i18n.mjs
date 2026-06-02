@@ -41,7 +41,24 @@ function getUsedKeys() {
 
 function loadLocale(name) {
   const data = JSON.parse(readFileSync(join(LOCALE_DIR, name), 'utf8'))
-  return new Set(Object.keys(data))
+  // i18next uses '.' as keySeparator by default, so a nested object like
+  //   { "nhi": { "alert_type": { "foo": "Foo" } } }
+  // is resolved by t('nhi.alert_type.foo'). Flatten the JSON to mirror that
+  // resolution. Top-level keys that already contain dots (the prevailing
+  // convention here) are preserved as-is.
+  const keys = new Set()
+  function walk(obj, prefix) {
+    for (const [k, v] of Object.entries(obj)) {
+      const path = prefix ? `${prefix}.${k}` : k
+      if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+        walk(v, path)
+      } else {
+        keys.add(path)
+      }
+    }
+  }
+  walk(data, '')
+  return keys
 }
 
 const used = getUsedKeys()

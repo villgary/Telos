@@ -494,11 +494,6 @@ class NHIAnalyzer:
                     models.NHIAlert.status == "new",
                 ).first()
                 if not existing:
-                    files = []
-                    for sig in critical_leak:
-                        ev = sig.get("evidence")
-                        if isinstance(ev, str):
-                            files.append(ev)
                     self.db.add(models.NHIAlert(
                         nhi_id=nhi.id,
                         alert_type="credential_leak",
@@ -508,7 +503,7 @@ class NHIAnalyzer:
                         title_key="nhi.alert.credential_leak.title",
                         title_params={"username": nhi.username},
                         message_key="nhi.alert.credential_leak.message",
-                        message_params={"username": nhi.username, "file_count": len(critical_leak), "files": files},
+                        message_params={"username": nhi.username, "file_count": len(critical_leak)},
                     ))
                     created += 1
 
@@ -627,6 +622,10 @@ class NHIAnalyzer:
             if existing:
                 existing.asset_count = len(recent_assets)
                 existing.updated_at = now
+                existing.title_params = {
+                    "username": username,
+                    "asset_count": len(recent_assets),
+                }
                 existing.message_params = {
                     "username": username,
                     "asset_count": len(recent_assets),

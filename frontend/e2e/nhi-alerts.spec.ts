@@ -3,12 +3,17 @@ import { test, expect } from '@playwright/test'
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:5173'
 
 test.beforeEach(async ({ page }) => {
-  // Login as admin
-  await page.goto(`${BASE}/login`)
-  await page.fill('input[name="username"]', 'admin')
-  await page.fill('input[name="password"]', 'Admin123!')
-  await page.click('button[type="submit"]')
-  await page.waitForURL(/\/$/)
+  // Try to go to home — if session expired we'll be redirected to /login
+  await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2000) // Allow redirect to /login to complete if session expired
+  // If redirected to login, log in as admin
+  if (page.url().includes('/login')) {
+    await page.locator('#username').fill('admin')
+    await page.locator('#password').fill('Admin123!')
+    await page.locator('button[type="submit"]').click()
+    await page.waitForURL(/\/$/, { timeout: 30000 }).catch(() => {})
+    await page.waitForLoadState('networkidle')
+  }
 })
 
 test('NHI alerts tab loads and shows alerts table', async ({ page }) => {

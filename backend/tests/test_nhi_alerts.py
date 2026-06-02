@@ -407,3 +407,43 @@ class TestCrossAssetSpreadAlert:
             models.NHIAlert.alert_type == "cross_asset_spread"
         ).count()
         assert count == 1
+
+    def test_cluster_alert_redetection_updates_title_params(self, db_session):
+        from backend.services.nhi_analyzer import NHIAnalyzer
+        now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        # Initial cluster: 3 assets, above threshold
+        for ip in ["10.0.0.1", "10.0.0.2", "10.0.0.3"]:
+            asset = _make_asset(db_session, ip=ip)
+            snap = _make_snapshot(db_session, asset, "deploy", is_admin=False, snap_time=now)
+            _make_nhi(db_session, snap, asset, is_admin=False)
+        self._setup_default_policy(db_session, threshold=3, window=7)
+
+        NHIAnalyzer(db_session).generate_alerts()
+
+        alert = db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.alert_type == "cross_asset_spread"
+        ).one()
+        first_alert_id = alert.id
+        assert alert.asset_count == 3
+        assert alert.title_params == {"username": "deploy", "asset_count": 3}
+
+        # Add a new asset to the cluster (do NOT resolve the existing alert)
+        new_asset = _make_asset(db_session, ip="10.0.0.4")
+        new_snap = _make_snapshot(db_session, new_asset, "deploy", is_admin=False, snap_time=now)
+        _make_nhi(db_session, new_snap, new_asset, is_admin=False)
+
+        NHIAnalyzer(db_session).generate_alerts()
+
+        # Same alert row was updated, NOT duplicated
+        alerts = db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.alert_type == "cross_asset_spread"
+        ).all()
+        assert len(alerts) == 1
+        assert alerts[0].id == first_alert_id
+        assert alerts[0].asset_count == 4
+        assert alerts[0].title_params == {"username": "deploy", "asset_count": 4}
+        assert alerts[0].message_params == {
+            "username": "deploy",
+            "asset_count": 4,
+            "window_days": 7,
+        }

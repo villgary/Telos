@@ -107,8 +107,8 @@ class NHIPolicyBase(BaseModel):
     require_owner: bool = True
     require_monitoring: bool = False
     enabled_alert_types: Optional[List[str]] = None
-    cross_asset_threshold: Optional[int] = Field(default=None, ge=2, le=100)
-    cross_asset_window_days: Optional[int] = Field(default=None, ge=1, le=365)
+    cross_asset_threshold: Optional[int] = Field(default=3, ge=2, le=100)
+    cross_asset_window_days: Optional[int] = Field(default=7, ge=1, le=365)
     enabled: bool = True
 
     _v_alert_types = field_validator("enabled_alert_types")(_validate_alert_types_list)
