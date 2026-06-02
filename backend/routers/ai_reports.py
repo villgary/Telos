@@ -659,7 +659,7 @@ class SearchFilter:
         self.online_only: bool = False
         self.offline_only: bool = False
         self.scan_failed: bool = False
-        self.parent_asset_id: int | None = None
+        self.parent_asset_id: Optional[int] = None
 
 
 def _parse_nl_patterns(query: str) -> tuple[SearchFilter, list[str]]:

@@ -84,9 +84,19 @@ class NHIAnalyzer:
 
     # ── Step 1: Classify a single account ────────────────────────────────────
 
-    def classify_account(self, snap: models.AccountSnapshot, asset_code: str = "") -> NHIClassification:
+    def classify_account(
+        self,
+        snap: models.AccountSnapshot,
+        asset_code: str = "",
+        prior_is_admin: Optional[bool] = None,
+    ) -> NHIClassification:
         """
         Classify a single AccountSnapshot into NHIType + NHILevel + risk signals.
+
+        prior_is_admin: when provided, skips the per-snapshot lookup of the
+        prior snapshot and uses this value directly. Callers that classify many
+        snapshots (sync_all) should pre-compute this in batch to avoid an N+1
+        query problem.
         """
         raw = snap.raw_info or {}
         sudo = snap.sudo_config or {}
@@ -111,9 +121,11 @@ class NHIAnalyzer:
                                         snap.uid_sid, raw, credential_types)
 
         # ── Risk signals ───────────────────────────────────────────────────
-        # Query prior snapshot for privilege escalation detection
+        # Use the batched prior_is_admin when provided; otherwise fall back to
+        # a per-snapshot lookup (avoids N+1 in sync_all but stays correct when
+        # classify_account is called standalone).
         prior_snap: Optional[models.AccountSnapshot] = None
-        if snap.snapshot_time is not None and snap.asset_id is not None:
+        if prior_is_admin is None and snap.snapshot_time is not None and snap.asset_id is not None:
             prior_snap = (
                 self.db.query(models.AccountSnapshot)
                 .filter(
@@ -127,6 +139,13 @@ class NHIAnalyzer:
                 .order_by(models.AccountSnapshot.snapshot_time.desc())
                 .first()
             )
+        # If the caller pre-computed prior_is_admin, fabricate a minimal stand-in
+        # so _detect_risk_signals can read .is_admin.
+        if prior_is_admin is not None:
+            class _Prior:
+                pass
+            prior_snap = _Prior()
+            prior_snap.is_admin = prior_is_admin
         risk_signals = self._detect_risk_signals(snap, nhi_type, raw, sudo,
                                                    credential_types, asset_code,
                                                    prior_snap=prior_snap)
@@ -370,6 +389,21 @@ class NHIAnalyzer:
         nhi_count = 0
         human_count = 0
 
+        # Batch-compute prior_admin for every snapshot in one pass, so
+        # classify_account can skip its per-snapshot lookup (avoids N+1).
+        prior_admin: dict[int, Optional[bool]] = {}
+        by_key: dict[tuple, list[models.AccountSnapshot]] = {}
+        for s in snapshots:
+            if s.snapshot_time is None:
+                continue
+            by_key.setdefault((s.asset_id, s.username), []).append(s)
+        for snaps in by_key.values():
+            snaps.sort(key=lambda s: s.snapshot_time)
+            prev = None
+            for s in snaps:
+                prior_admin[s.id] = prev.is_admin if prev is not None else None
+                prev = s
+
         for snap in snapshots:
             is_human = _is_human(snap.username)
             if is_human:
@@ -377,7 +411,9 @@ class NHIAnalyzer:
                 continue
 
             nhi_count += 1
-            classification = self.classify_account(snap)
+            classification = self.classify_account(
+                snap, prior_is_admin=prior_admin.get(snap.id)
+            )
 
             # Check if record already exists for this snapshot
             existing = self.db.query(models.NHIIdentity).filter(

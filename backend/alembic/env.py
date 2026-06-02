@@ -8,8 +8,7 @@ if _dotenv.exists():
     from dotenv import load_dotenv
     load_dotenv(_dotenv)
 
-from backend.database import engine
-from backend.models import Base
+from backend.database import engine, Base
 from backend import models  # noqa: F401 — ensure all models are registered
 
 config = context.config

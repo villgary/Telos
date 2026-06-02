@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import time
+from typing import Optional
 
 import requests
 
@@ -24,7 +25,7 @@ ANALYSIS_ENGINE_TIMEOUT = int(os.environ.get("GO_ANALYSIS_ENGINE_TIMEOUT", "300"
 
 def run_full_analysis_go(
     scope: str = "global",
-    scope_id: int | None = None,
+    scope_id: Optional[int] = None,
     lang: str = "zh",
 ) -> dict:
     """

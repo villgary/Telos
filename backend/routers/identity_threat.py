@@ -406,7 +406,7 @@ class AttackPathsResponse(BaseModel):
 @router.get("/attack-paths/{analysis_id}", response_model=AttackPathsResponse)
 def get_attack_paths(
     analysis_id: int,
-    source_id: Annotated[int | None, Query(description="起点 snapshot_id，不传则从所有高危节点出发")] = None,
+    source_id: Annotated[Optional[int], Query(description="起点 snapshot_id，不传则从所有高危节点出发")] = None,
     max_hops: Annotated[int, Query(ge=1, le=5)] = 3,
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),

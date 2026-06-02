@@ -12,9 +12,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 import pytest
 from pydantic import ValidationError
 
+from backend import models
 from backend.schemas.nhi import (
     NHIAlertResponse,
     NHIPolicyCreate,
+    NHIPolicyResponse,
     NHIPolicyUpdate,
 )
 
@@ -93,3 +95,57 @@ class TestNHIPolicyUpdate:
     def test_partial_update_validates(self):
         with pytest.raises(ValidationError):
             NHIPolicyUpdate(cross_asset_threshold=0)
+
+
+class TestNHIPolicyResponse:
+    def test_round_trip_from_orm(self):
+        """NHIPolicyResponse.model_validate(orm_policy) must carry every field
+        back out, including cross_asset_threshold and cross_asset_window_days."""
+        policy = models.NHIPolicy(
+            id=1,
+            name="default",
+            description="baseline policy",
+            nhi_type=None,
+            severity_filter="critical",
+            rotation_days=90,
+            alert_threshold_days=14,
+            require_owner=True,
+            require_monitoring=False,
+            enabled_alert_types=["privilege_escalation", "cross_asset_spread"],
+            cross_asset_threshold=5,
+            cross_asset_window_days=14,
+            enabled=True,
+            created_at=datetime(2026, 6, 1, 12, 0, 0),
+        )
+        resp = NHIPolicyResponse.model_validate(policy)
+        assert resp.id == 1
+        assert resp.name == "default"
+        assert resp.description == "baseline policy"
+        assert resp.severity_filter == "critical"
+        assert resp.rotation_days == 90
+        assert resp.alert_threshold_days == 14
+        assert resp.require_owner is True
+        assert resp.require_monitoring is False
+        assert resp.enabled_alert_types == ["privilege_escalation", "cross_asset_spread"]
+        assert resp.cross_asset_threshold == 5
+        assert resp.cross_asset_window_days == 14
+        assert resp.enabled is True
+
+    def test_cross_asset_fields_default_to_none(self):
+        """If the ORM row somehow lacks the cross_asset columns, the response
+        must still serialize (the schema declares them Optional)."""
+        policy = models.NHIPolicy(
+            id=2,
+            name="legacy",
+            require_owner=True,
+            require_monitoring=False,
+            enabled=True,
+            enabled_alert_types=None,
+            cross_asset_threshold=None,
+            cross_asset_window_days=None,
+            created_at=datetime(2026, 6, 1),
+        )
+        resp = NHIPolicyResponse.model_validate(policy)
+        assert resp.cross_asset_threshold is None
+        assert resp.cross_asset_window_days is None
+        assert resp.enabled_alert_types is None

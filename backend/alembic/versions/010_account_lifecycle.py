@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "010"
-down_revision = "009_identity_fusion"
+down_revision = "009"
 branch_labels = None
 depends_on = None
 

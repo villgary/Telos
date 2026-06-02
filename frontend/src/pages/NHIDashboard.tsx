@@ -396,7 +396,7 @@ export default function NHIDashboard() {
       ),
     },
     {
-      title: t('nhi.title'),
+      title: t('nhi.alertTitle'),
       dataIndex: 'title',
       key: 'title',
       render: (v: string, r: NHIAlert) => (

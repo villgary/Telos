@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from fastapi.responses import StreamingResponse
 import asyncio
+from typing import Optional
 
 from backend.database import get_db
 from backend import models, schemas, auth
@@ -19,12 +20,12 @@ async def create_and_broadcast_alert(
     level: models.AlertLevel,
     title: str,
     message: str,
-    job_id: int | None = None,
-    diff_item_id: int | None = None,
-    title_key: str | None = None,
-    title_params: dict | None = None,
-    message_key: str | None = None,
-    message_params: dict | None = None,
+    job_id: Optional[int] = None,
+    diff_item_id: Optional[int] = None,
+    title_key: Optional[str] = None,
+    title_params: Optional[dict] = None,
+    message_key: Optional[str] = None,
+    message_params: Optional[dict] = None,
 ) -> models.Alert:
     """
     Persist a new alert and broadcast it to all connected SSE clients.

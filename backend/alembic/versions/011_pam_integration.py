@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "011"
-down_revision = "010_account_lifecycle"
+down_revision = "010"
 branch_labels = None
 depends_on = None
 
