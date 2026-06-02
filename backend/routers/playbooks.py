@@ -17,7 +17,7 @@ POST   /api/v1/playbook-executions/{id}/reject   — 审批拒绝
 """
 
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -34,35 +34,35 @@ router = APIRouter(prefix="/api/v1", tags=["playbooks"])
 class StepSchema(BaseModel):
     action: str = Field(description="disable_account | revoke_nopasswd | notify_owner | lock_account | flag_review")
     target: str = Field(description="snapshot | identity | asset")
-    params: dict | None = Field(default=None, description="Action-specific parameters")
+    params: Optional[dict] = Field(default=None, description="Action-specific parameters")
 
 
 class PlaybookCreate(BaseModel):
     name: str
-    description: str | None = None
+    description: Optional[str] = None
     trigger_type: str = Field(default="manual")
-    trigger_filter: dict | None = None
+    trigger_filter: Optional[dict] = None
     steps: list[StepSchema]
     approval_required: bool = True
     enabled: bool = True
 
 
 class PlaybookUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    trigger_type: str | None = None
-    trigger_filter: dict | None = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    trigger_type: Optional[str] = None
+    trigger_filter: Optional[dict] = None
     steps: list[StepSchema] | None = None
-    approval_required: bool | None = None
-    enabled: bool | None = None
+    approval_required: Optional[bool] = None
+    enabled: Optional[bool] = None
 
 
 class PlaybookResponse(BaseModel):
     id: int
     name: str
-    description: str | None
-    name_key: str | None = None
-    description_key: str | None = None
+    description: Optional[str]
+    name_key: Optional[str] = None
+    description_key: Optional[str] = None
     trigger_type: str
     trigger_filter: dict
     steps: list[dict]
@@ -79,9 +79,9 @@ class PlaybookExecutionResponse(BaseModel):
     snapshot_id: int
     status: str
     steps_status: list[dict]
-    result: str | None
-    triggered_by: int | None
-    approved_by: int | None
+    result: Optional[str]
+    triggered_by: Optional[int]
+    approved_by: Optional[int]
     created_at: datetime
 
     model_config = {"from_attributes": True, "extra": "forbid"}
@@ -108,7 +108,7 @@ def _execute_step(
     db: Session,
     step: dict,
     snapshot: models.AccountSnapshot,
-    user_id: int | None,
+    user_id: Optional[int],
 ) -> dict:
     """
     Execute a single playbook step.
@@ -190,7 +190,7 @@ def create_playbook(
 
 @router.get("/playbooks", response_model=list[PlaybookResponse])
 def list_playbooks(
-    enabled: bool | None = None,
+    enabled: Optional[bool] = None,
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
@@ -361,8 +361,8 @@ def _approve_and_execute(
 
 @router.get("/playbook-executions", response_model=list[PlaybookExecutionResponse])
 def list_executions(
-    playbook_id: int | None = None,
-    status: str | None = None,
+    playbook_id: Optional[int] = None,
+    status: Optional[str] = None,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),

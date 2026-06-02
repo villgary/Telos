@@ -16,6 +16,7 @@ Detections:
 
 import logging
 from datetime import datetime, timezone, timedelta
+from typing import Optional
 
 from sqlalchemy import select, and_
 from sqlalchemy.orm import Session
@@ -61,12 +62,12 @@ class RealtimeMonitor:
         level: AlertLevel,
         title: str,
         message: str,
-        job_id: int | None = None,
-        snapshot_id: int | None = None,
-        title_key: str | None = None,
-        title_params: dict | None = None,
-        message_key: str | None = None,
-        message_params: dict | None = None,
+        job_id: Optional[int] = None,
+        snapshot_id: Optional[int] = None,
+        title_key: Optional[str] = None,
+        title_params: Optional[dict] = None,
+        message_key: Optional[str] = None,
+        message_params: Optional[dict] = None,
     ) -> models.Alert:
         """Write an alert to DB. Returns the alert record."""
         alert = models.Alert(
@@ -90,7 +91,7 @@ class RealtimeMonitor:
         self,
         alert: models.Alert,
         db: Session,
-        snapshot_id: int | None = None,
+        snapshot_id: Optional[int] = None,
     ) -> int:
         """
         Find all enabled playbooks with trigger_type='alert' whose trigger_filter

@@ -2,7 +2,7 @@
 NHI Module API — Non-Human Identity registry and governance.
 """
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -154,8 +154,8 @@ def get_dashboard(
 
 @router.get("/inventory", response_model=NHIInventoryResponse)
 def list_nhi(
-    nhi_type: Annotated[str | None, Query(description="Filter by NHI type")] = None,
-    level: Annotated[str | None, Query(description="Filter by risk level")] = None,
+    nhi_type: Annotated[Optional[str], Query(description="Filter by NHI type")] = None,
+    level: Annotated[Optional[str], Query(description="Filter by risk level")] = None,
     no_owner: Annotated[bool, Query(description="Only NHIs without owner")] = False,
     limit: Annotated[int, Query(ge=1, le=500)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -236,9 +236,9 @@ def sync_nhi(
 
 @router.get("/alerts", response_model=list[NHIAlertResponse])
 def list_nhi_alerts(
-    level: Annotated[str | None, Query(description="Filter by alert level")] = None,
-    status_filter: Annotated[str | None, Query(alias="status", description="Filter by status")] = None,
-    alert_type: Annotated[str | None, Query(description="Filter by alert type")] = None,
+    level: Annotated[Optional[str], Query(description="Filter by alert level")] = None,
+    status_filter: Annotated[Optional[str], Query(alias="status", description="Filter by status")] = None,
+    alert_type: Annotated[Optional[str], Query(description="Filter by alert type")] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
     db: Session = Depends(get_db),
@@ -373,7 +373,7 @@ def get_nhi(
 def assign_nhi_owner(
     nhi_id: int,
     owner_email: Annotated[str, Query(description="Owner email")],
-    owner_name: Annotated[str | None, Query(description="Owner display name")] = None,
+    owner_name: Annotated[Optional[str], Query(description="Owner display name")] = None,
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
