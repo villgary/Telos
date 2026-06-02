@@ -111,8 +111,25 @@ class NHIAnalyzer:
                                         snap.uid_sid, raw, credential_types)
 
         # ── Risk signals ───────────────────────────────────────────────────
+        # Query prior snapshot for privilege escalation detection
+        prior_snap: Optional[models.AccountSnapshot] = None
+        if snap.snapshot_time is not None and snap.asset_id is not None:
+            prior_snap = (
+                self.db.query(models.AccountSnapshot)
+                .filter(
+                    models.AccountSnapshot.asset_id == snap.asset_id,
+                    models.AccountSnapshot.username == snap.username,
+                    models.AccountSnapshot.snapshot_time < snap.snapshot_time,
+                    models.AccountSnapshot.snapshot_time.isnot(None),
+                    models.AccountSnapshot.deleted_at.is_(None),
+                    models.AccountSnapshot.id != snap.id,
+                )
+                .order_by(models.AccountSnapshot.snapshot_time.desc())
+                .first()
+            )
         risk_signals = self._detect_risk_signals(snap, nhi_type, raw, sudo,
-                                                   credential_types, asset_code)
+                                                   credential_types, asset_code,
+                                                   prior_snap=prior_snap)
 
         # ── Risk score (0-100) ─────────────────────────────────────────────
         risk_score = self._compute_risk_score(risk_signals)
@@ -192,6 +209,7 @@ class NHIAnalyzer:
     def _detect_risk_signals(
         self, snap: models.AccountSnapshot, nhi_type: str,
         raw: dict, sudo: dict, credential_types: list[str], asset_code: str,
+        prior_snap: Optional[models.AccountSnapshot] = None,
     ) -> list[dict]:
         """
         Generate risk signals for this NHI.
@@ -256,6 +274,15 @@ class NHIAnalyzer:
                 "detail": f"{username} SSH key has no rotation record",
                 "severity": "medium",
                 "evidence": "No last_rotated timestamp in ssh_key_audit",
+            })
+
+        # ── P0: Privilege escalation (compared against prior snapshot) ─────
+        if prior_snap is not None and prior_snap.is_admin is False and snap.is_admin is True:
+            signals.append({
+                "type": "privilege_escalation",
+                "detail": f"{username} escalated to admin (was non-admin in prior snapshot)",
+                "severity": "critical",
+                "evidence": f"prior.is_admin=False → current.is_admin=True on {asset_code or snap.asset_id}",
             })
 
         # ── P2: Long-lived password (if password age available) ──────────
@@ -397,8 +424,13 @@ class NHIAnalyzer:
 
     def generate_alerts(self) -> int:
         """
-        Generate NHIAlert records for critical conditions.
-        Returns count of new alerts created.
+        Generate NHIAlert records for the following conditions:
+          - privilege_escalation  (new): NHI is_admin flipped False→True vs prior snapshot
+          - nopasswd_sudo         (new): NHI has NOPASSWD sudo configured
+          - credential_leak       (new): NHI risk_signals contains a critical credential_leak
+          - risk_alert            (existing, now with i18n): NHI level is critical/high
+          - no_owner              (existing, now with i18n): NHI has no owner
+          - cross_asset_spread    (handled separately in _generate_cluster_alerts)
         """
         nhis = self.db.query(models.NHIIdentity).filter(
             models.NHIIdentity.is_active == True
@@ -408,12 +440,113 @@ class NHIAnalyzer:
         created = 0
 
         for nhi in nhis:
-            # Critical/high risk → create alert
+            # ── Privilege escalation ──────────────────────────────────────
+            has_escalation_signal = any(
+                s.get("type") == "privilege_escalation" for s in (nhi.risk_signals or [])
+            )
+            if not has_escalation_signal and nhi.is_admin:
+                # Detect on-the-fly: query prior snapshot to find escalation
+                prior_snap_for_alert = (
+                    self.db.query(models.AccountSnapshot)
+                    .filter(
+                        models.AccountSnapshot.asset_id == nhi.asset_id,
+                        models.AccountSnapshot.username == nhi.username,
+                        models.AccountSnapshot.is_admin == False,
+                        models.AccountSnapshot.deleted_at.is_(None),
+                        models.AccountSnapshot.id != nhi.snapshot_id,
+                    )
+                    .order_by(models.AccountSnapshot.snapshot_time.desc().nullslast())
+                    .first()
+                )
+                if prior_snap_for_alert is not None:
+                    # Append the risk_signal to the NHI
+                    signals = list(nhi.risk_signals or [])
+                    signals.append({
+                        "type": "privilege_escalation",
+                        "detail": f"{nhi.username} escalated to admin (was non-admin in prior snapshot)",
+                        "severity": "critical",
+                        "evidence": f"prior.is_admin=False → current.is_admin=True on {nhi.hostname or nhi.asset_id}",
+                    })
+                    nhi.risk_signals = signals
+                    has_escalation_signal = True
+
+            if has_escalation_signal:
+                existing = self.db.query(models.NHIAlert).filter(
+                    models.NHIAlert.nhi_id == nhi.id,
+                    models.NHIAlert.alert_type == "privilege_escalation",
+                    models.NHIAlert.status == "new",
+                ).first()
+                if not existing:
+                    self.db.add(models.NHIAlert(
+                        nhi_id=nhi.id,
+                        alert_type="privilege_escalation",
+                        level="critical",
+                        title=f"Privilege escalation: {nhi.username}",
+                        message=f"Account {nhi.username} escalated to admin on {nhi.hostname or ''}",
+                        title_key="nhi.alert.privilege_escalation.title",
+                        title_params={"username": nhi.username, "asset_code": nhi.hostname or ""},
+                        message_key="nhi.alert.privilege_escalation.message",
+                        message_params={"username": nhi.username, "asset_code": nhi.hostname or ""},
+                    ))
+                    created += 1
+
+            # ── NOPASSWD sudo ─────────────────────────────────────────────
+            if nhi.has_nopasswd_sudo:
+                existing = self.db.query(models.NHIAlert).filter(
+                    models.NHIAlert.nhi_id == nhi.id,
+                    models.NHIAlert.alert_type == "nopasswd_sudo",
+                    models.NHIAlert.status == "new",
+                ).first()
+                if not existing:
+                    self.db.add(models.NHIAlert(
+                        nhi_id=nhi.id,
+                        alert_type="nopasswd_sudo",
+                        level="critical",
+                        title=f"NOPASSWD sudo: {nhi.username}",
+                        message=f"Account {nhi.username} has NOPASSWD sudo on {nhi.hostname or ''}",
+                        title_key="nhi.alert.nopasswd_sudo.title",
+                        title_params={"username": nhi.username, "asset_code": nhi.hostname or ""},
+                        message_key="nhi.alert.nopasswd_sudo.message",
+                        message_params={"username": nhi.username, "asset_code": nhi.hostname or ""},
+                    ))
+                    created += 1
+
+            # ── Credential leak (critical) ────────────────────────────────
+            critical_leak = [
+                s for s in (nhi.risk_signals or [])
+                if s.get("type") == "credential_leak" and s.get("severity") == "critical"
+            ]
+            if critical_leak:
+                existing = self.db.query(models.NHIAlert).filter(
+                    models.NHIAlert.nhi_id == nhi.id,
+                    models.NHIAlert.alert_type == "credential_leak",
+                    models.NHIAlert.status == "new",
+                ).first()
+                if not existing:
+                    files = []
+                    for sig in critical_leak:
+                        ev = sig.get("evidence")
+                        if isinstance(ev, str):
+                            files.append(ev)
+                    self.db.add(models.NHIAlert(
+                        nhi_id=nhi.id,
+                        alert_type="credential_leak",
+                        level="critical",
+                        title=f"Credential leak: {nhi.username}",
+                        message=f"Account {nhi.username} has {len(critical_leak)} critical credential findings",
+                        title_key="nhi.alert.credential_leak.title",
+                        title_params={"username": nhi.username},
+                        message_key="nhi.alert.credential_leak.message",
+                        message_params={"username": nhi.username, "file_count": len(critical_leak), "files": files},
+                    ))
+                    created += 1
+
+            # ── Risk alert (existing, i18n-upgraded) ──────────────────────
             if nhi.nhi_level in ("critical", "high"):
                 existing = self.db.query(models.NHIAlert).filter(
                     models.NHIAlert.nhi_id == nhi.id,
-                    models.NHIAlert.status == "new",
                     models.NHIAlert.alert_type == "risk_alert",
+                    models.NHIAlert.status == "new",
                 ).first()
                 if not existing:
                     self.db.add(models.NHIAlert(
@@ -422,15 +555,19 @@ class NHIAnalyzer:
                         level=nhi.nhi_level,
                         title=f"NHI风险: {nhi.username}",
                         message=f"非人类身份 {nhi.username} 风险等级为 {nhi.nhi_level}，风险评分 {nhi.risk_score}",
+                        title_key="nhi.alert.risk_alert.title",
+                        title_params={"username": nhi.username, "level": nhi.nhi_level, "score": nhi.risk_score},
+                        message_key="nhi.alert.risk_alert.message",
+                        message_params={"username": nhi.username, "level": nhi.nhi_level, "score": nhi.risk_score},
                     ))
                     created += 1
 
-            # No owner → create alert
+            # ── No owner (existing, i18n-upgraded) ────────────────────────
             if not nhi.owner_identity_id and not nhi.owner_email:
                 existing = self.db.query(models.NHIAlert).filter(
                     models.NHIAlert.nhi_id == nhi.id,
-                    models.NHIAlert.status == "new",
                     models.NHIAlert.alert_type == "no_owner",
+                    models.NHIAlert.status == "new",
                 ).first()
                 if not existing:
                     self.db.add(models.NHIAlert(
@@ -439,11 +576,25 @@ class NHIAnalyzer:
                         level="medium",
                         title=f"NHI无Owner: {nhi.username}",
                         message=f"非人类身份 {nhi.username} 未分配Owner，请及时认领",
+                        title_key="nhi.alert.no_owner.title",
+                        title_params={"username": nhi.username},
+                        message_key="nhi.alert.no_owner.message",
+                        message_params={"username": nhi.username},
                     ))
                     created += 1
 
+        # Cluster alerts (cross_asset_spread) — separate method
+        created += self._generate_cluster_alerts()
+
         self.db.commit()
         return created
+
+    def _generate_cluster_alerts(self) -> int:
+        """
+        Placeholder; implemented in Task 5.
+        Returns 0 for now.
+        """
+        return 0
 
 
 # ─── Standalone helper (mirrors identity_threat.py _is_human) ─────────────────
