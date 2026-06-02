@@ -615,9 +615,32 @@ export const toggleNhiMonitoring = (id: number, enabled: boolean) =>
 export const syncNHI = () =>
   api.post('/nhi/sync')
 
+export interface NHIAlert {
+  id: number
+  nhi_id?: number
+  nhi_type?: string
+  cluster_key?: string
+  nhi_username?: string
+  asset_count?: number
+  title_key?: string
+  title_params?: Record<string, unknown>
+  message_key?: string
+  message_params?: Record<string, unknown>
+  alert_type: string
+  level: string
+  title: string
+  message?: string | null
+  is_read: boolean
+  status: string
+  resolved_at?: string | null
+  created_at: string
+  updated_at?: string
+}
+
 export const listNHIAlerts = (params?: {
   level?: string
   status?: string
+  alert_type?: string
   limit?: number
   offset?: number
 }) => api.get('/nhi/alerts', { params })
