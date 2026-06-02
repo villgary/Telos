@@ -16,6 +16,7 @@ from backend.schemas import (
     NHIInventoryResponse,
     NHIAlertResponse,
     NHIDashboardResponse,
+    NHIPolicyCreate,
     NHIPolicyResponse,
 )
 from backend.services.nhi_analyzer import NHIAnalyzer
@@ -33,6 +34,10 @@ def _alert_to_response(alert: models.NHIAlert) -> NHIAlertResponse:
     return NHIAlertResponse(
         id=alert.id,
         nhi_id=alert.nhi_id,
+        cluster_key=alert.cluster_key,
+        nhi_username=alert.nhi_username or (nhi.username if nhi else None),
+        nhi_type=alert.nhi_type or (nhi.nhi_type if nhi else None),
+        asset_count=alert.asset_count,
         alert_type=alert.alert_type,
         level=alert.level,
         title=alert.title,
@@ -41,9 +46,7 @@ def _alert_to_response(alert: models.NHIAlert) -> NHIAlertResponse:
         status=alert.status,
         resolved_at=alert.resolved_at,
         created_at=alert.created_at,
-        nhi_username=nhi.username if nhi else None,
-        nhi_type=nhi.nhi_type if nhi else None,
-        asset_code=nhi.hostname if nhi else None,
+        updated_at=alert.updated_at,
     )
 
 
@@ -296,6 +299,7 @@ def sync_nhi(
 def list_nhi_alerts(
     level: Annotated[str | None, Query(description="Filter by alert level")] = None,
     status_filter: Annotated[str | None, Query(alias="status", description="Filter by status")] = None,
+    alert_type: Annotated[str | None, Query(description="Filter by alert type")] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
     db: Session = Depends(get_db),
@@ -307,6 +311,8 @@ def list_nhi_alerts(
         query = query.filter(models.NHIAlert.level == level)
     if status_filter:
         query = query.filter(models.NHIAlert.status == status_filter)
+    if alert_type:
+        query = query.filter(models.NHIAlert.alert_type == alert_type)
     alerts = query.order_by(
         models.NHIAlert.created_at.desc()
     ).offset(offset).limit(limit).all()
@@ -365,21 +371,24 @@ def list_nhi_policies(
 
 @router.post("/policies", response_model=NHIPolicyResponse, status_code=status.HTTP_201_CREATED)
 def create_nhi_policy(
-    body: dict,
+    body: NHIPolicyCreate,
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
     """Create a new NHI governance policy."""
     policy = models.NHIPolicy(
-        name=body.get("name"),
-        description=body.get("description"),
-        nhi_type=body.get("nhi_type"),
-        severity_filter=body.get("severity_filter"),
-        rotation_days=body.get("rotation_days"),
-        alert_threshold_days=body.get("alert_threshold_days"),
-        require_owner=body.get("require_owner", True),
-        require_monitoring=body.get("require_monitoring", False),
-        enabled=body.get("enabled", True),
+        name=body.name,
+        description=body.description,
+        nhi_type=body.nhi_type,
+        severity_filter=body.severity_filter,
+        rotation_days=body.rotation_days,
+        alert_threshold_days=body.alert_threshold_days,
+        require_owner=body.require_owner,
+        require_monitoring=body.require_monitoring,
+        enabled_alert_types=body.enabled_alert_types,
+        cross_asset_threshold=body.cross_asset_threshold,
+        cross_asset_window_days=body.cross_asset_window_days,
+        enabled=body.enabled,
         created_by=user.id,
     )
     db.add(policy)
