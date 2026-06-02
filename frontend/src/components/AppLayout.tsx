@@ -26,11 +26,13 @@ import {
   FolderOutlined,
   ApiOutlined,
   AimOutlined,
+  QuestionCircleOutlined,
 } from '@ant-design/icons'
 import { Link, useNavigate, Outlet } from 'react-router-dom'
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from '../LanguageSwitcher'
+import HelpDrawer from './HelpDrawer'
 import api from '../api/client'
 
 const { Header, Sider, Content } = Layout
@@ -73,6 +75,7 @@ export function AppLayout({ viewMode, setViewMode }: AppLayoutProps) {
 
   const [unreadCount, setUnreadCount] = useState(0)
   const [recentAlerts, setRecentAlerts] = useState<Alert[]>([])
+  const [helpOpen, setHelpOpen] = useState(false)
 
   useEffect(() => {
     if (!token) navigate('/login', { replace: true })
@@ -180,6 +183,14 @@ export function AppLayout({ viewMode, setViewMode }: AppLayoutProps) {
           <LanguageSwitcher />
         </div>
 
+        <div
+          style={{ color: '#fff', cursor: 'pointer', marginRight: 16, fontSize: 18 }}
+          onClick={() => setHelpOpen(true)}
+          title={t('help.title', 'Help')}
+        >
+          <QuestionCircleOutlined />
+        </div>
+
         <div style={{ color: '#fff', cursor: 'pointer' }} onClick={handleLogout}>
           {t('header.logout')}
         </div>
@@ -252,6 +263,7 @@ export function AppLayout({ viewMode, setViewMode }: AppLayoutProps) {
           </Content>
         </Layout>
       </Layout>
+      <HelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} />
     </Layout>
   )
 }
