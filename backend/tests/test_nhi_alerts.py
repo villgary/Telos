@@ -211,3 +211,46 @@ class TestCredentialLeakAlert:
         assert db_session.query(models.NHIAlert).filter(
             models.NHIAlert.alert_type == "credential_leak"
         ).count() == 0
+
+
+class TestExistingAlertsI18n:
+    def test_risk_alert_has_i18n_keys(self, db_session):
+        from backend.services.nhi_analyzer import NHIAnalyzer
+        asset = _make_asset(db_session)
+        now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        snap = _make_snapshot(db_session, asset, "deploy", is_admin=True, snap_time=now)
+        nhi = models.NHIIdentity(
+            snapshot_id=snap.id, asset_id=asset.id, nhi_type="service", nhi_level="critical",
+            username=snap.username, uid_sid=snap.uid_sid, hostname=asset.asset_code,
+            ip_address=asset.ip, is_admin=True, has_nopasswd_sudo=False,
+            credential_types=[], risk_signals=[], risk_score=80,
+            first_seen_at=now, last_seen_at=now, is_active=True,
+        )
+        db_session.add(nhi); db_session.commit()
+
+        NHIAnalyzer(db_session).generate_alerts()
+
+        alert = db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.alert_type == "risk_alert"
+        ).first()
+        assert alert is not None
+        assert alert.title_key == "nhi.alert.risk_alert.title"
+        assert alert.title_params == {"username": "deploy", "level": "critical", "score": 80}
+        # Chinese fallback still present
+        assert "deploy" in alert.title
+
+    def test_no_owner_alert_has_i18n_keys(self, db_session):
+        from backend.services.nhi_analyzer import NHIAnalyzer
+        asset = _make_asset(db_session)
+        now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        snap = _make_snapshot(db_session, asset, "deploy", is_admin=False, snap_time=now)
+        _make_nhi(db_session, snap, asset, is_admin=False)
+
+        NHIAnalyzer(db_session).generate_alerts()
+
+        alert = db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.alert_type == "no_owner"
+        ).first()
+        assert alert is not None
+        assert alert.title_key == "nhi.alert.no_owner.title"
+        assert alert.title_params == {"username": "deploy"}
