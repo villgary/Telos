@@ -1675,6 +1675,7 @@
   "nhi.level.high": "高危",
   "nhi.level.medium": "中危",
   "nhi.level.low": "低危",
+  "nhi.level.warning": "警告",
   "owner.title": "归属人",
   "owner.unassigned": "未分配",
   "owner.change": "变更",

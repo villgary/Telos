@@ -1667,6 +1667,7 @@
   "nhi.level.high": "High",
   "nhi.level.medium": "Medium",
   "nhi.level.low": "Low",
+  "nhi.level.warning": "Warning",
   "owner.title": "Owner",
   "owner.unassigned": "Unassigned",
   "owner.change": "Change",

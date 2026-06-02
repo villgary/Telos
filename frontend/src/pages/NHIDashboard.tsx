@@ -32,6 +32,7 @@ const LEVEL_COLORS: Record<string, string> = {
   critical: '#ff4d4f',
   high: '#fa8c16',
   medium: '#faad14',
+  warning: '#fadb14',
   low: '#52c41a',
 }
 
