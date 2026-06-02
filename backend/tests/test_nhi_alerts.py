@@ -346,11 +346,12 @@ class TestCrossAssetSpreadAlert:
 
         NHIAnalyzer(db_session).generate_alerts()
 
-        # 1 cluster alert exists but asset_count is 2 (one filtered out)
+        # 1 of 3 NHIs is outside the 7-day window, so only 2 are in-window.
+        # 2 < threshold of 3, so no cluster alert is created.
         alerts = db_session.query(models.NHIAlert).filter(
             models.NHIAlert.alert_type == "cross_asset_spread"
         ).all()
-        assert len(alerts) == 0  # below threshold of 3 in window
+        assert len(alerts) == 0
 
     def test_cluster_alert_policy_nhi_type_filter(self, db_session):
         from backend.services.nhi_analyzer import NHIAnalyzer
