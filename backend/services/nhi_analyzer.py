@@ -8,7 +8,7 @@ Sprint 1 scope:
   4. Populate NHI alerts for rotation_due / no_owner / critical risks
 """
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 from dataclasses import dataclass, field
 from collections import defaultdict
@@ -562,10 +562,98 @@ class NHIAnalyzer:
 
     def _generate_cluster_alerts(self) -> int:
         """
-        Placeholder; implemented in Task 5.
-        Returns 0 for now.
+        Detect NHI sprawl: same (nhi_type, username) appearing on multiple assets
+        within a policy-defined window. Fires one alert per cluster.
+
+        Most-permissive policy selection: when multiple policies match a cluster,
+        the one with the smallest cross_asset_threshold wins, ensuring one alert
+        per cluster regardless of overlapping policy definitions.
         """
-        return 0
+        from collections import defaultdict
+
+        spread_policies = [
+            p for p in self.db.query(models.NHIPolicy).filter(
+                models.NHIPolicy.enabled == True
+            ).all()
+            if p.enabled_alert_types and "cross_asset_spread" in p.enabled_alert_types
+        ]
+        if not spread_policies:
+            return 0
+
+        candidates = self.db.query(models.NHIIdentity).filter(
+            models.NHIIdentity.is_active == True,
+            models.NHIIdentity.asset_id.isnot(None),
+        ).all()
+
+        # (nhi_type, username) -> set of asset_ids
+        clusters = defaultdict(set)
+        # (nhi_type, username) -> most-permissive policy
+        cluster_policy = {}
+        for nhi in candidates:
+            key = (nhi.nhi_type, nhi.username)
+            clusters[key].add(nhi.asset_id)
+            matching = [
+                p for p in spread_policies
+                if p.nhi_type is None or p.nhi_type == nhi.nhi_type
+            ]
+            if not matching:
+                continue
+            most_permissive = min(matching, key=lambda p: p.cross_asset_threshold or 1000)
+            if key not in cluster_policy or most_permissive.cross_asset_threshold < cluster_policy[key].cross_asset_threshold:
+                cluster_policy[key] = most_permissive
+
+        now = datetime.now(timezone.utc)
+        created = 0
+        for (nhi_type, username), asset_ids in clusters.items():
+            policy = cluster_policy.get((nhi_type, username))
+            if policy is None or policy.cross_asset_threshold is None:
+                continue
+            window_cutoff = now - timedelta(days=policy.cross_asset_window_days)
+            recent_assets = {
+                n.asset_id for n in candidates
+                if n.nhi_type == nhi_type
+                and n.username == username
+                and n.last_seen_at is not None
+                and (n.last_seen_at if n.last_seen_at.tzinfo else n.last_seen_at.replace(tzinfo=timezone.utc)) >= window_cutoff
+            }
+            if len(recent_assets) < policy.cross_asset_threshold:
+                continue
+            cluster_key = f"{nhi_type}:{username}"
+            existing = self.db.query(models.NHIAlert).filter(
+                models.NHIAlert.cluster_key == cluster_key,
+                models.NHIAlert.alert_type == "cross_asset_spread",
+                models.NHIAlert.status == "new",
+            ).first()
+            if existing:
+                existing.asset_count = len(recent_assets)
+                existing.updated_at = now
+                existing.message_params = {
+                    "username": username,
+                    "asset_count": len(recent_assets),
+                    "window_days": policy.cross_asset_window_days,
+                }
+            else:
+                self.db.add(models.NHIAlert(
+                    nhi_id=None,
+                    cluster_key=cluster_key,
+                    nhi_username=username,
+                    nhi_type=nhi_type,
+                    asset_count=len(recent_assets),
+                    alert_type="cross_asset_spread",
+                    level="warning",
+                    title=f"Cross-asset spread: {username}",
+                    message=f"Same NHI seen on {len(recent_assets)} assets in the last {policy.cross_asset_window_days} days",
+                    title_key="nhi.alert.cross_asset_spread.title",
+                    title_params={"username": username, "asset_count": len(recent_assets)},
+                    message_key="nhi.alert.cross_asset_spread.message",
+                    message_params={
+                        "username": username,
+                        "asset_count": len(recent_assets),
+                        "window_days": policy.cross_asset_window_days,
+                    },
+                ))
+                created += 1
+        return created
 
 
 # ─── Standalone helper (mirrors identity_threat.py _is_human) ─────────────────

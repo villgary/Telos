@@ -28,10 +28,14 @@ def db_session():
     engine.dispose()
 
 
+_credential_counter = 0
+
 def _make_credential(session):
+    global _credential_counter
+    _credential_counter += 1
     from backend.models.assets import AuthType
     c = models.Credential(
-        name="test-cred", auth_type=AuthType.password, username="root",
+        name=f"test-cred-{_credential_counter}", auth_type=AuthType.password, username="root",
     )
     session.add(c); session.commit()
     return c
@@ -254,3 +258,152 @@ class TestExistingAlertsI18n:
         assert alert is not None
         assert alert.title_key == "nhi.alert.no_owner.title"
         assert alert.title_params == {"username": "deploy"}
+
+
+class TestCrossAssetSpreadAlert:
+    def _setup_default_policy(self, db_session, threshold=3, window=7, nhi_type=None,
+                                enabled_alert_types=None):
+        p = models.NHIPolicy(
+            name="default", enabled=True, nhi_type=nhi_type,
+            enabled_alert_types=enabled_alert_types or [
+                "privilege_escalation", "nopasswd_sudo", "credential_leak", "cross_asset_spread",
+            ],
+            cross_asset_threshold=threshold, cross_asset_window_days=window,
+        )
+        db_session.add(p); db_session.commit()
+        return p
+
+    def test_cluster_alert_fires(self, db_session):
+        from backend.services.nhi_analyzer import NHIAnalyzer
+        now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        # 3 assets, same (nhi_type, username)
+        nhis = []
+        for ip in ["10.0.0.1", "10.0.0.2", "10.0.0.3"]:
+            asset = _make_asset(db_session, ip=ip)
+            snap = _make_snapshot(db_session, asset, "deploy", is_admin=False, snap_time=now)
+            nhi = _make_nhi(db_session, snap, asset, is_admin=False)
+            nhis.append(nhi)
+        self._setup_default_policy(db_session)
+
+        NHIAnalyzer(db_session).generate_alerts()
+
+        alert = db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.alert_type == "cross_asset_spread"
+        ).first()
+        assert alert is not None
+        assert alert.nhi_id is None
+        assert alert.cluster_key == "service:deploy"
+        assert alert.nhi_username == "deploy"
+        assert alert.nhi_type == "service"
+        assert alert.asset_count == 3
+        assert alert.title_key == "nhi.alert.cross_asset_spread.title"
+        assert alert.title_params == {"username": "deploy", "asset_count": 3}
+
+    def test_cluster_alert_below_threshold(self, db_session):
+        from backend.services.nhi_analyzer import NHIAnalyzer
+        now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        for ip in ["10.0.0.1", "10.0.0.2"]:
+            asset = _make_asset(db_session, ip=ip)
+            snap = _make_snapshot(db_session, asset, "deploy", is_admin=False, snap_time=now)
+            _make_nhi(db_session, snap, asset, is_admin=False)
+        self._setup_default_policy(db_session, threshold=3)
+
+        NHIAnalyzer(db_session).generate_alerts()
+
+        assert db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.alert_type == "cross_asset_spread"
+        ).count() == 0
+
+    def test_cluster_alert_dedup(self, db_session):
+        from backend.services.nhi_analyzer import NHIAnalyzer
+        now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        for ip in ["10.0.0.1", "10.0.0.2", "10.0.0.3"]:
+            asset = _make_asset(db_session, ip=ip)
+            snap = _make_snapshot(db_session, asset, "deploy", is_admin=False, snap_time=now)
+            _make_nhi(db_session, snap, asset, is_admin=False)
+        self._setup_default_policy(db_session)
+
+        analyzer = NHIAnalyzer(db_session)
+        analyzer.generate_alerts()
+        analyzer.generate_alerts()  # second run
+
+        assert db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.alert_type == "cross_asset_spread"
+        ).count() == 1
+
+    def test_cluster_alert_window_respected(self, db_session):
+        from backend.services.nhi_analyzer import NHIAnalyzer
+        now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        # 3 assets, but one is older than the window
+        for i, ip in enumerate(["10.0.0.1", "10.0.0.2", "10.0.0.3"]):
+            asset = _make_asset(db_session, ip=ip)
+            snap = _make_snapshot(db_session, asset, "deploy", is_admin=False, snap_time=now)
+            last_seen = now - timedelta(days=20) if i == 2 else now
+            nhi = _make_nhi(db_session, snap, asset, is_admin=False)
+            nhi.last_seen_at = last_seen
+        db_session.commit()
+        self._setup_default_policy(db_session, window=7)
+
+        NHIAnalyzer(db_session).generate_alerts()
+
+        # 1 cluster alert exists but asset_count is 2 (one filtered out)
+        alerts = db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.alert_type == "cross_asset_spread"
+        ).all()
+        assert len(alerts) == 0  # below threshold of 3 in window
+
+    def test_cluster_alert_policy_nhi_type_filter(self, db_session):
+        from backend.services.nhi_analyzer import NHIAnalyzer
+        now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        # 3 service NHIs, 3 cloud NHIs — policy only applies to cloud
+        for ip in ["10.0.0.1", "10.0.0.2", "10.0.0.3"]:
+            asset = _make_asset(db_session, ip=ip)
+            s_snap = _make_snapshot(db_session, asset, "deploy", is_admin=False, snap_time=now)
+            n_svc = _make_nhi(db_session, s_snap, asset, is_admin=False)
+            n_svc.nhi_type = "service"
+            c_snap = _make_snapshot(db_session, asset, "cloud-role", is_admin=False, snap_time=now)
+            n_cloud = models.NHIIdentity(
+                snapshot_id=c_snap.id, asset_id=asset.id, nhi_type="cloud", nhi_level="low",
+                username="cloud-role", uid_sid=c_snap.uid_sid, hostname=asset.asset_code,
+                ip_address=asset.ip, is_admin=False, has_nopasswd_sudo=False,
+                credential_types=[], risk_signals=[],
+                first_seen_at=now, last_seen_at=now, is_active=True,
+            )
+            db_session.add(n_cloud)
+        db_session.commit()
+        self._setup_default_policy(db_session, nhi_type="cloud")
+
+        NHIAnalyzer(db_session).generate_alerts()
+
+        alerts = db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.alert_type == "cross_asset_spread"
+        ).all()
+        # Only the cloud cluster fires
+        assert len(alerts) == 1
+        assert alerts[0].nhi_type == "cloud"
+        assert alerts[0].nhi_username == "cloud-role"
+
+    def test_most_permissive_policy_wins(self, db_session):
+        from backend.services.nhi_analyzer import NHIAnalyzer
+        now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        # 3 assets — only the most permissive (smallest threshold) policy should fire
+        for ip in ["10.0.0.1", "10.0.0.2", "10.0.0.3"]:
+            asset = _make_asset(db_session, ip=ip)
+            snap = _make_snapshot(db_session, asset, "deploy", is_admin=False, snap_time=now)
+            _make_nhi(db_session, snap, asset, is_admin=False)
+        # Two policies, both nhi_type=None (global): one with threshold=3, one with threshold=5
+        for th in [3, 5]:
+            db_session.add(models.NHIPolicy(
+                name=f"policy-{th}", enabled=True, nhi_type=None,
+                enabled_alert_types=["cross_asset_spread"],
+                cross_asset_threshold=th, cross_asset_window_days=7,
+            ))
+        db_session.commit()
+
+        NHIAnalyzer(db_session).generate_alerts()
+
+        # 3 assets >= both thresholds; but we should only fire ONE alert per cluster
+        count = db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.alert_type == "cross_asset_spread"
+        ).count()
+        assert count == 1
