@@ -1,6 +1,6 @@
 """Non-human identity (NHI) ORM models."""
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, JSON, Index
 from sqlalchemy.orm import relationship
 
 from backend.models._db import Base
@@ -43,11 +43,14 @@ class NHIIdentity(Base):
 
 class NHIAlert(Base):
     __tablename__ = "nhi_alerts"
+    __table_args__ = (
+        Index("ix_nhi_alerts_cluster_alert_type_status", "cluster_key", "alert_type", "status"),
+    )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     nhi_id = Column(Integer, ForeignKey("nhi_identities.id"), nullable=True)
     # cluster_key is String(192) to fit worst-case f"{nhi_type}:{username}" = 32+1+128 chars
-    cluster_key = Column(String(192), nullable=True, index=True)
+    cluster_key = Column(String(192), nullable=True)
     nhi_username = Column(String(128), nullable=True)
     nhi_type = Column(String(32), nullable=True)
     asset_count = Column(Integer, nullable=True)

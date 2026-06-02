@@ -36,13 +36,10 @@ def test_nhi_alert_columns_present(inspector):
 
 
 def test_nhi_alert_cluster_index_present(inspector):
-    # ORM-level: cluster_key has a single-column index from model definition.
-    # The composite (cluster_key, alert_type, status) index lives in the
-    # Alembic migration only — not exercisable via Base.metadata.create_all.
     indexes = {ix["name"]: ix for ix in inspector.get_indexes("nhi_alerts")}
-    assert "ix_nhi_alerts_cluster_key" in indexes
-    ix = indexes["ix_nhi_alerts_cluster_key"]
-    assert ix["column_names"] == ["cluster_key"]
+    assert "ix_nhi_alerts_cluster_alert_type_status" in indexes
+    ix = indexes["ix_nhi_alerts_cluster_alert_type_status"]
+    assert set(ix["column_names"]) == {"cluster_key", "alert_type", "status"}
 
 
 def test_nhi_policy_columns_present(inspector):
