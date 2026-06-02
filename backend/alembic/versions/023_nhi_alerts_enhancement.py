@@ -18,7 +18,7 @@ def upgrade() -> None:
     # NHIAlert: cluster-friendly + i18n refresh tracking
     with op.batch_alter_table("nhi_alerts") as batch:
         batch.alter_column("nhi_id", existing_type=sa.Integer(), nullable=True)
-        batch.add_column(sa.Column("cluster_key", sa.String(128), nullable=True))
+        batch.add_column(sa.Column("cluster_key", sa.String(192), nullable=True))
         batch.add_column(sa.Column("nhi_username", sa.String(128), nullable=True))
         batch.add_column(sa.Column("nhi_type", sa.String(32), nullable=True))
         batch.add_column(sa.Column("asset_count", sa.Integer(), nullable=True))
@@ -58,4 +58,6 @@ def downgrade() -> None:
         batch.drop_column("nhi_type")
         batch.drop_column("nhi_username")
         batch.drop_column("cluster_key")
+        # NOTE: this downgrade will fail if any cluster alerts (nhi_id IS NULL) exist.
+        # Operator must resolve/clean them first, or run: DELETE FROM nhi_alerts WHERE nhi_id IS NULL;
         batch.alter_column("nhi_id", existing_type=sa.Integer(), nullable=False)
