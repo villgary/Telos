@@ -79,7 +79,14 @@ class TestPrivilegeEscalationAlert:
         now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
         prior = _make_snapshot(db_session, asset, "deploy", is_admin=False, snap_time=now - timedelta(days=2))
         current = _make_snapshot(db_session, asset, "deploy", is_admin=True, snap_time=now)
-        nhi = _make_nhi(db_session, current, asset, is_admin=True)
+        # Pre-populate the privilege_escalation risk_signal (as _detect_risk_signals would)
+        escalation_signal = {
+            "type": "privilege_escalation",
+            "detail": "deploy escalated to admin (was non-admin in prior snapshot)",
+            "severity": "critical",
+            "evidence": f"prior.is_admin=False → current.is_admin=True on {asset.asset_code}",
+        }
+        nhi = _make_nhi(db_session, current, asset, is_admin=True, risk_signals=[escalation_signal])
 
         analyzer = NHIAnalyzer(db_session)
         analyzer.generate_alerts()
@@ -94,7 +101,7 @@ class TestPrivilegeEscalationAlert:
         assert alert.title_params == {
             "username": "deploy", "asset_code": asset.asset_code,
         }
-        # risk_signal also appended
+        # risk_signal should still be present (set by test, not stripped by generate_alerts)
         db_session.refresh(nhi)
         assert any(s.get("type") == "privilege_escalation" for s in nhi.risk_signals)
 

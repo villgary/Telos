@@ -441,36 +441,7 @@ class NHIAnalyzer:
 
         for nhi in nhis:
             # ── Privilege escalation ──────────────────────────────────────
-            has_escalation_signal = any(
-                s.get("type") == "privilege_escalation" for s in (nhi.risk_signals or [])
-            )
-            if not has_escalation_signal and nhi.is_admin:
-                # Detect on-the-fly: query prior snapshot to find escalation
-                prior_snap_for_alert = (
-                    self.db.query(models.AccountSnapshot)
-                    .filter(
-                        models.AccountSnapshot.asset_id == nhi.asset_id,
-                        models.AccountSnapshot.username == nhi.username,
-                        models.AccountSnapshot.is_admin == False,
-                        models.AccountSnapshot.deleted_at.is_(None),
-                        models.AccountSnapshot.id != nhi.snapshot_id,
-                    )
-                    .order_by(models.AccountSnapshot.snapshot_time.desc().nullslast())
-                    .first()
-                )
-                if prior_snap_for_alert is not None:
-                    # Append the risk_signal to the NHI
-                    signals = list(nhi.risk_signals or [])
-                    signals.append({
-                        "type": "privilege_escalation",
-                        "detail": f"{nhi.username} escalated to admin (was non-admin in prior snapshot)",
-                        "severity": "critical",
-                        "evidence": f"prior.is_admin=False → current.is_admin=True on {nhi.hostname or nhi.asset_id}",
-                    })
-                    nhi.risk_signals = signals
-                    has_escalation_signal = True
-
-            if has_escalation_signal:
+            if any(s.get("type") == "privilege_escalation" for s in (nhi.risk_signals or [])):
                 existing = self.db.query(models.NHIAlert).filter(
                     models.NHIAlert.nhi_id == nhi.id,
                     models.NHIAlert.alert_type == "privilege_escalation",
