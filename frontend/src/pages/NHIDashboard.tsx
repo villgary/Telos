@@ -129,6 +129,13 @@ interface NHIAlert {
   nhi_username: string | null
   nhi_type: string | null
   asset_code: string | null
+  cluster_key?: string
+  asset_count?: number
+  title_key?: string
+  title_params?: Record<string, unknown>
+  message_key?: string
+  message_params?: Record<string, unknown>
+  updated_at?: string
 }
 
 
@@ -153,6 +160,12 @@ function StatCard({ label, value, icon, color, suffix }: {
 
 export default function NHIDashboard() {
   const { t } = useTranslation()
+  const renderAlertTitle = (a: NHIAlert): string => {
+    if (a.title_key) {
+      return t(a.title_key, (a.title_params ?? {}) as Record<string, unknown>)
+    }
+    return a.title
+  }
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [dashboard, setDashboard] = useState<NHIDashboard | null>(null)
@@ -165,6 +178,7 @@ export default function NHIDashboard() {
   const [noOwner, setNoOwner] = useState(false)
   const [alertList, setAlertList] = useState<NHIAlert[]>([])
   const [alertLoading, setAlertLoading] = useState(false)
+  const [filterAlertType, setFilterAlertType] = useState<string | undefined>()
   const [ownerModal, setOwnerModal] = useState<NHIIdentity | null>(null)
   const [ownerForm] = Form.useForm()
 
@@ -219,7 +233,7 @@ export default function NHIDashboard() {
 
   const loadAlerts = () => {
     setAlertLoading(true)
-    listNHIAlerts({ limit: 50 })
+    listNHIAlerts({ limit: 50, alert_type: filterAlertType })
       .then(r => setAlertList(r.data))
       .catch(() => message.error(t('nhi.loadFailed')))
       .finally(() => setAlertLoading(false))
@@ -227,7 +241,7 @@ export default function NHIDashboard() {
 
   useEffect(() => {
     if (activeTab === 'alerts') loadAlerts()
-  }, [activeTab])
+  }, [activeTab, filterAlertType])
 
   const handleAck = async (id: number) => {
     try {
@@ -384,11 +398,12 @@ export default function NHIDashboard() {
       title: t('nhi.title'),
       dataIndex: 'title',
       key: 'title',
-      render: (t: string, r: NHIAlert) => (
+      render: (v: string, r: NHIAlert) => (
         <Space direction="vertical" size={0}>
-          <Text>{r.title}</Text>
+          <Text>{renderAlertTitle(r)}</Text>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {r.nhi_username} · {r.asset_code || '—'}
+            {r.nhi_username || r.nhi_type || '—'}
+            {r.cluster_key && r.asset_count != null && ` · ${r.asset_count} ${t('nhi.assets')}`}
           </Text>
         </Space>
       ),
@@ -398,13 +413,7 @@ export default function NHIDashboard() {
       dataIndex: 'alert_type',
       key: 'alert_type',
       width: 140,
-      render: (v: string) => {
-        const map: Record<string, string> = {
-          risk_alert: '风险告警', no_owner: '无Owner', rotation_due: '轮换到期',
-          privilege_escalation: '权限升级', credential_leak: '凭据泄露',
-        }
-        return <Tag>{map[v] || v}</Tag>
-      },
+      render: (v: string) => <Tag>{t('nhi.alert_type.' + v) || v}</Tag>,
     },
     {
       title: t('nhi.status'),
@@ -713,15 +722,34 @@ export default function NHIDashboard() {
 
         {/* Alerts tab */}
         {activeTab === 'alerts' && (
-          <Table
-            size="small"
-            dataSource={alertList}
-            rowKey="id"
-            loading={alertLoading}
-            columns={alertColumns}
-            pagination={{ pageSize: 15 }}
-            rowClassName={(r) => r.is_read ? 'nhi-alert-read' : ''}
-          />
+          <>
+            <Space style={{ marginBottom: 12 }} wrap>
+              <Select
+                placeholder={t('nhi.filterAlertType')}
+                allowClear
+                style={{ width: 180 }}
+                value={filterAlertType}
+                onChange={v => setFilterAlertType(v || undefined)}
+                options={[
+                  { value: 'privilege_escalation', label: t('nhi.alert_type.privilege_escalation') },
+                  { value: 'nopasswd_sudo', label: t('nhi.alert_type.nopasswd_sudo') },
+                  { value: 'credential_leak', label: t('nhi.alert_type.credential_leak') },
+                  { value: 'cross_asset_spread', label: t('nhi.alert_type.cross_asset_spread') },
+                  { value: 'risk_alert', label: t('nhi.alert_type.risk_alert') },
+                  { value: 'no_owner', label: t('nhi.alert_type.no_owner') },
+                ]}
+              />
+            </Space>
+            <Table
+              size="small"
+              dataSource={alertList}
+              rowKey="id"
+              loading={alertLoading}
+              columns={alertColumns}
+              pagination={{ pageSize: 15 }}
+              rowClassName={(r) => r.is_read ? 'nhi-alert-read' : ''}
+            />
+          </>
         )}
       </Card>
 

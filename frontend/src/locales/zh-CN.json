@@ -1864,5 +1864,13 @@
       "risk_alert": "风险告警",
       "no_owner": "无Owner"
     }
-  }
+  },
+  "nhi.filterAlertType": "按告警类型筛选",
+  "nhi.assets": "资产",
+  "nhi.alert_type.privilege_escalation": "权限提升",
+  "nhi.alert_type.nopasswd_sudo": "免密sudo",
+  "nhi.alert_type.credential_leak": "凭据泄露",
+  "nhi.alert_type.cross_asset_spread": "跨资产扩散",
+  "nhi.alert_type.risk_alert": "风险告警",
+  "nhi.alert_type.no_owner": "无Owner"
 }

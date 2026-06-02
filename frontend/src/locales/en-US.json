@@ -1856,5 +1856,13 @@
       "risk_alert": "Risk alert",
       "no_owner": "No owner"
     }
-  }
+  },
+  "nhi.filterAlertType": "Filter by alert type",
+  "nhi.assets": "assets",
+  "nhi.alert_type.privilege_escalation": "Privilege escalation",
+  "nhi.alert_type.nopasswd_sudo": "NOPASSWD sudo",
+  "nhi.alert_type.credential_leak": "Credential leak",
+  "nhi.alert_type.cross_asset_spread": "Cross-asset spread",
+  "nhi.alert_type.risk_alert": "Risk alert",
+  "nhi.alert_type.no_owner": "No owner"
 }
