@@ -19,7 +19,7 @@
 - New `NHIPolicy` fields for per-policy rule configuration
 - Cluster alert model for `cross_asset_spread` (one alert per `(nhi_type, username)`)
 - Frontend: i18n title rendering, alert type filter, asset_count column for cluster alerts
-- Alembic migration 021
+- Alembic migration 023
 - Backend + frontend tests
 
 **Out of scope (later sub-projects):**
@@ -59,14 +59,14 @@
 
 ## 2. Data Model Changes
 
-Single Alembic migration `021_nhi_alerts_enhancement.py`.
+Single Alembic migration `023_nhi_alerts_enhancement.py`.
 
 ### `NHIAlert`
 
 | Field | Change | Why |
 |---|---|---|
 | `nhi_id` | `nullable=True` (was NOT NULL) | Cluster alerts span multiple NHIs |
-| `cluster_key` | NEW `String(128)`, nullable, **indexed** with `(alert_type, status)` | Dedup key for cluster alerts; format `f"{nhi_type}:{username}"` |
+| `cluster_key` | NEW `String(192)`, nullable, **indexed** with `(alert_type, status)` | Dedup key for cluster alerts; format `f"{nhi_type}:{username}"`; sized to fit `String(32) + ":" + String(128)` worst case |
 | `nhi_username` | NEW `String(128)`, nullable, denormalized | Cluster alerts need a displayable username; no JOIN needed |
 | `nhi_type` | NEW `String(32)`, nullable, denormalized | Same reason |
 | `asset_count` | NEW `Integer`, nullable | For `cross_asset_spread` |
@@ -122,7 +122,7 @@ All three iterate `NHIIdentity` rows and dedup by `(nhi_id, alert_type, status='
 **`credential_leak`** — signal already detected; just fire the alert:
 - Trigger: any `risk_signals[i]` where `type == 'credential_leak'` and `severity == 'critical'`
 - Title key: `nhi.alert.credential_leak.title`
-- Message params: `{username, files: [...]}`
+- Message params: `{username, file_count}`
 
 ### Cluster alert: `cross_asset_spread`
 
@@ -303,7 +303,7 @@ Used in the alerts tab `title` column and in the dashboard's recent-alerts list 
 
 | Test | Verifies |
 |---|---|
-| `test_migration_021_nhi_alert_cluster_key` | After upgrade, `NHIAlert.nhi_id` is nullable, `cluster_key` column exists, composite index exists |
+| `test_migration_023_nhi_alert_cluster_key` | After upgrade, `NHIAlert.nhi_id` is nullable, `cluster_key` column exists, composite index exists |
 
 ### Frontend — `frontend/e2e/nhi-alerts.spec.ts` (new file)
 
@@ -368,9 +368,9 @@ Smoke-level only.
 - `backend/schemas/nhi.py` — new fields on response models, validation on `NHIPolicy` fields
 - `backend/routers/nhi.py` — `NHIPolicy` create/list endpoints use new schema
 - `backend/main.py` — `_seed_default_nhi_policies()` lifespan helper
-- `backend/alembic/versions/021_nhi_alerts_enhancement.py` — new migration
+- `backend/alembic/versions/023_nhi_alerts_enhancement.py` — new migration
 - `backend/tests/test_nhi_alerts.py` — new
-- `backend/tests/test_migrations.py` — extend (or new `test_migration_021`)
+- `backend/tests/test_migrations.py` — extend (or new `test_migration_023`)
 
 **Frontend:**
 - `frontend/src/pages/NHIDashboard.tsx` — i18n rendering, alert type filter, asset_count column
@@ -389,7 +389,7 @@ None at design-approval time. Items deferred to later sub-projects (see "Out of 
 
 1. Running `alembic upgrade head` on a populated DB succeeds without data loss
 2. `pytest backend/tests/test_nhi_alerts.py` passes all 11 tests
-3. `pytest backend/tests/test_migrations.py` includes and passes `test_migration_021_nhi_alert_cluster_key`
+3. `pytest backend/tests/test_migrations.py` includes and passes `test_migration_023_nhi_alert_cluster_key`
 4. Triggering a sync with a known `nopasswd_sudo` NHI produces an alert with `title_key='nhi.alert.nopasswd_sudo.title'`
 5. Triggering a sync with 3 NHIs for the same `(nhi_type, username)` on 3 distinct assets produces 1 cluster alert with `asset_count=3`, `nhi_id=None`, `cluster_key` set
 6. Running the sync twice in a row does not produce duplicate cluster alerts — the second run updates `asset_count` and `updated_at` on the first
