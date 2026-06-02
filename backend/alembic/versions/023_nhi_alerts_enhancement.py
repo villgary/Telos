@@ -16,15 +16,29 @@ depends_on = None
 
 def upgrade() -> None:
     # NHIAlert: cluster-friendly + i18n refresh tracking
-    with op.batch_alter_table("nhi_alerts") as batch:
-        batch.alter_column("nhi_id", existing_type=sa.Integer(), nullable=True)
-        batch.add_column(sa.Column("cluster_key", sa.String(192), nullable=True))
-        batch.add_column(sa.Column("nhi_username", sa.String(128), nullable=True))
-        batch.add_column(sa.Column("nhi_type", sa.String(32), nullable=True))
-        batch.add_column(sa.Column("asset_count", sa.Integer(), nullable=True))
-        batch.add_column(
-            sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now(), nullable=True)
-        )
+    # SQLite: nhi_id nullability change needs a table rebuild via batch mode.
+    # The column adds are plain ALTER TABLE ADD COLUMN (always appended).
+    bind = op.get_bind()
+    is_sqlite = bind.dialect.name == "sqlite"
+
+    if is_sqlite:
+        with op.batch_alter_table("nhi_alerts") as batch:
+            batch.alter_column("nhi_id", existing_type=sa.Integer(), nullable=True)
+        op.execute("ALTER TABLE nhi_alerts ADD COLUMN cluster_key VARCHAR(192)")
+        op.execute("ALTER TABLE nhi_alerts ADD COLUMN nhi_username VARCHAR(128)")
+        op.execute("ALTER TABLE nhi_alerts ADD COLUMN nhi_type VARCHAR(32)")
+        op.execute("ALTER TABLE nhi_alerts ADD COLUMN asset_count INTEGER")
+        op.execute("ALTER TABLE nhi_alerts ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+    else:
+        with op.batch_alter_table("nhi_alerts") as batch:
+            batch.alter_column("nhi_id", existing_type=sa.Integer(), nullable=True)
+            batch.add_column(sa.Column("cluster_key", sa.String(192), nullable=True))
+            batch.add_column(sa.Column("nhi_username", sa.String(128), nullable=True))
+            batch.add_column(sa.Column("nhi_type", sa.String(32), nullable=True))
+            batch.add_column(sa.Column("asset_count", sa.Integer(), nullable=True))
+            batch.add_column(
+                sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now(), nullable=True)
+            )
     op.create_index(
         "ix_nhi_alerts_cluster_alert_type_status",
         "nhi_alerts",

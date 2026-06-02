@@ -5,7 +5,7 @@ import sqlalchemy as sa
 
 
 revision = '012_review_reminders'
-down_revision = '011_pam_integration'
+down_revision = '011'
 branch_labels = None
 depends_on = None
 

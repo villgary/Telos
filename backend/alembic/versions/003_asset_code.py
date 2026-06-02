@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "003"
-down_revision = "002_asset_category_defs"
+down_revision = "002"
 branch_labels = None
 depends_on = None
 

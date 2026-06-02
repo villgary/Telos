@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "014"
-down_revision = "013"
+down_revision = "013_account_risk_score"
 branch_labels = None
 depends_on = None
 

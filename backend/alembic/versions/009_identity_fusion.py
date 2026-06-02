@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "009"
-down_revision = "008_category_parent"
+down_revision = "008"
 branch_labels = None
 depends_on = None
 
