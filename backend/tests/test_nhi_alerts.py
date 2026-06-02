@@ -134,3 +134,80 @@ class TestPrivilegeEscalationAlert:
         assert db_session.query(models.NHIAlert).filter(
             models.NHIAlert.alert_type == "privilege_escalation"
         ).count() == 0
+
+
+class TestNopasswdSudoAlert:
+    def test_nopasswd_sudo_alert(self, db_session):
+        from backend.services.nhi_analyzer import NHIAnalyzer
+        asset = _make_asset(db_session)
+        now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        snap = _make_snapshot(db_session, asset, "deploy", is_admin=True, snap_time=now)
+        nhi = _make_nhi(db_session, snap, asset, is_admin=True, has_nopasswd=True)
+
+        NHIAnalyzer(db_session).generate_alerts()
+
+        alert = db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.nhi_id == nhi.id,
+            models.NHIAlert.alert_type == "nopasswd_sudo",
+        ).first()
+        assert alert is not None
+        assert alert.level == "critical"
+        assert alert.title_key == "nhi.alert.nopasswd_sudo.title"
+
+    def test_nopasswd_sudo_dedup(self, db_session):
+        from backend.services.nhi_analyzer import NHIAnalyzer
+        asset = _make_asset(db_session)
+        now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        snap = _make_snapshot(db_session, asset, "deploy", is_admin=True, snap_time=now)
+        nhi = _make_nhi(db_session, snap, asset, is_admin=True, has_nopasswd=True)
+
+        analyzer = NHIAnalyzer(db_session)
+        analyzer.generate_alerts()
+        analyzer.generate_alerts()  # second run
+
+        count = db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.nhi_id == nhi.id,
+            models.NHIAlert.alert_type == "nopasswd_sudo",
+        ).count()
+        assert count == 1
+
+
+class TestCredentialLeakAlert:
+    def test_credential_leak_alert(self, db_session):
+        from backend.services.nhi_analyzer import NHIAnalyzer
+        asset = _make_asset(db_session)
+        now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        snap = _make_snapshot(db_session, asset, "deploy", is_admin=False, snap_time=now)
+        leak_signals = [{
+            "type": "credential_leak", "severity": "critical",
+            "detail": "x", "evidence": "/home/deploy/.aws/credentials",
+        }]
+        nhi = _make_nhi(db_session, snap, asset, is_admin=False, risk_signals=leak_signals)
+
+        NHIAnalyzer(db_session).generate_alerts()
+
+        alert = db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.nhi_id == nhi.id,
+            models.NHIAlert.alert_type == "credential_leak",
+        ).first()
+        assert alert is not None
+        assert alert.title_key == "nhi.alert.credential_leak.title"
+        assert alert.message_params["file_count"] == 1
+
+    def test_no_alert_for_non_critical_credential_signal(self, db_session):
+        from backend.services.nhi_analyzer import NHIAnalyzer
+        asset = _make_asset(db_session)
+        now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        snap = _make_snapshot(db_session, asset, "deploy", is_admin=False, snap_time=now)
+        # medium-severity leak — should NOT fire credential_leak alert
+        signals = [{
+            "type": "credential_leak", "severity": "medium",
+            "detail": "x", "evidence": "/tmp/x",
+        }]
+        _make_nhi(db_session, snap, asset, is_admin=False, risk_signals=signals)
+
+        NHIAnalyzer(db_session).generate_alerts()
+
+        assert db_session.query(models.NHIAlert).filter(
+            models.NHIAlert.alert_type == "credential_leak"
+        ).count() == 0
