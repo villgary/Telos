@@ -208,67 +208,6 @@ def list_nhi(
     )
 
 
-@router.get("/{nhi_id}", response_model=NHIIdentityResponse)
-def get_nhi(
-    nhi_id: int,
-    db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
-):
-    """Get a single NHI record."""
-    nhi = db.query(models.NHIIdentity).filter(
-        models.NHIIdentity.id == nhi_id
-    ).first()
-    if not nhi:
-        raise HTTPException(404, "NHI not found")
-    return _nhi_to_response(nhi)
-
-
-@router.patch("/{nhi_id}/owner")
-def assign_nhi_owner(
-    nhi_id: int,
-    owner_email: Annotated[str, Query(description="Owner email")],
-    owner_name: Annotated[str | None, Query(description="Owner display name")] = None,
-    db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
-):
-    """Assign an owner to an NHI record."""
-    nhi = db.query(models.NHIIdentity).filter(
-        models.NHIIdentity.id == nhi_id
-    ).first()
-    if not nhi:
-        raise HTTPException(404, "NHI not found")
-
-    # Try to find matching human identity
-    identity = db.query(models.HumanIdentity).filter(
-        models.HumanIdentity.email == owner_email
-    ).first()
-
-    nhi.owner_identity_id = identity.id if identity else None
-    nhi.owner_email = owner_email
-    nhi.owner_name = owner_name or ""
-    db.commit()
-
-    return {"ok": True, "owner_email": owner_email}
-
-
-@router.patch("/{nhi_id}/monitor")
-def toggle_nhi_monitoring(
-    nhi_id: int,
-    enabled: Annotated[bool, Query(description="Enable or disable monitoring")] = True,
-    db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
-):
-    """Enable or disable monitoring for an NHI."""
-    nhi = db.query(models.NHIIdentity).filter(
-        models.NHIIdentity.id == nhi_id
-    ).first()
-    if not nhi:
-        raise HTTPException(404, "NHI not found")
-    nhi.is_monitored = enabled
-    db.commit()
-    return {"ok": True, "is_monitored": enabled}
-
-
 # ─── Sync ───────────────────────────────────────────────────────────────────
 
 @router.post("/sync")
@@ -411,3 +350,66 @@ def delete_nhi_policy(
         raise HTTPException(404, "Policy not found")
     db.delete(policy)
     db.commit()
+
+
+# ─── Single-record routes (must come last so /{nhi_id} doesn't shadow /alerts, /policies, /sync) ──
+
+@router.get("/{nhi_id}", response_model=NHIIdentityResponse)
+def get_nhi(
+    nhi_id: int,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """Get a single NHI record."""
+    nhi = db.query(models.NHIIdentity).filter(
+        models.NHIIdentity.id == nhi_id
+    ).first()
+    if not nhi:
+        raise HTTPException(404, "NHI not found")
+    return _nhi_to_response(nhi)
+
+
+@router.patch("/{nhi_id}/owner")
+def assign_nhi_owner(
+    nhi_id: int,
+    owner_email: Annotated[str, Query(description="Owner email")],
+    owner_name: Annotated[str | None, Query(description="Owner display name")] = None,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """Assign an owner to an NHI record."""
+    nhi = db.query(models.NHIIdentity).filter(
+        models.NHIIdentity.id == nhi_id
+    ).first()
+    if not nhi:
+        raise HTTPException(404, "NHI not found")
+
+    # Try to find matching human identity
+    identity = db.query(models.HumanIdentity).filter(
+        models.HumanIdentity.email == owner_email
+    ).first()
+
+    nhi.owner_identity_id = identity.id if identity else None
+    nhi.owner_email = owner_email
+    nhi.owner_name = owner_name or ""
+    db.commit()
+
+    return {"ok": True, "owner_email": owner_email}
+
+
+@router.patch("/{nhi_id}/monitor")
+def toggle_nhi_monitoring(
+    nhi_id: int,
+    enabled: Annotated[bool, Query(description="Enable or disable monitoring")] = True,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """Enable or disable monitoring for an NHI."""
+    nhi = db.query(models.NHIIdentity).filter(
+        models.NHIIdentity.id == nhi_id
+    ).first()
+    if not nhi:
+        raise HTTPException(404, "NHI not found")
+    nhi.is_monitored = enabled
+    db.commit()
+    return {"ok": True, "is_monitored": enabled}
