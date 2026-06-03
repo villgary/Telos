@@ -1,5 +1,4 @@
 """AI Agent Management API — first-class identity governance."""
-from datetime import datetime
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -138,6 +137,9 @@ async def trigger_scan(
         query = query.filter(models.AccountSnapshot.asset_id == request.asset_id)
     snapshots = query.all()
 
+    # Pre-snapshot existing IDs so we can classify discovered vs updated accurately
+    pre_existing_ids = {row[0] for row in db.query(models.AIAgent.id).all()}
+
     agents_discovered = 0
     agents_updated = 0
     errors: List[str] = []
@@ -145,12 +147,10 @@ async def trigger_scan(
         try:
             new_agents = ingest_signals(db, snap.raw_info, snap.asset_id)
             for a in new_agents:
-                if a.discovered_at and a.discovered_at > (
-                    datetime.utcnow().replace(microsecond=0)
-                ):
-                    agents_discovered += 1
-                else:
+                if a.id in pre_existing_ids:
                     agents_updated += 1
+                else:
+                    agents_discovered += 1
         except Exception as e:
             errors.append(f"snapshot {snap.id}: {e}")
     db.commit()
