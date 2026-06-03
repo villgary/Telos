@@ -8,12 +8,15 @@ Enhanced with: SSH key audit, Sudoers depth audit, credential file scan.
 import re
 import io
 import os
+import logging
 from datetime import datetime
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Set, Dict
 
 import paramiko
 from paramiko import SSHClient, AutoAddPolicy, AuthenticationException
+
+logger = logging.getLogger(__name__)
 
 
 # ───────────────────────────────────────────────
@@ -951,6 +954,14 @@ def scan_asset(
                 for f in credential_findings
             ]
 
+        # AI Agent signals (graceful — never breaks the scan)
+        try:
+            ai_signals = collect_ai_signals(client)
+            if ai_signals:
+                accounts[0].raw_info["ai_agent_signals"] = ai_signals
+        except Exception as e:
+            logger.warning("AI Agent signal collection skipped: %s", e)
+
         return (ConnectionResult(success=True, status="online"), accounts)
 
     finally:
@@ -966,3 +977,65 @@ def _summarize_findings(findings: List[CredentialFinding]) -> dict:
         "warning": len(warning),
         "types": list(set(f.file_type for f in findings)),
     }
+
+
+# ───────────────────────────────────────────────
+#  AI Agent signal probe (Task 13)
+# ───────────────────────────────────────────────
+
+def _parse_probe_output(raw: str) -> dict:
+    """Parse '===SECTION===\\nline1\\nline2' into {section: [lines]}."""
+    if not raw:
+        return {}
+    sections = {"config_files": [], "env_vars": [], "processes": [],
+                "framework_paths": [], "package_json": []}
+    current = None
+    for line in raw.splitlines():
+        if line.startswith("===") and line.endswith("==="):
+            key = line.strip("=").lower()
+            current = {
+                "cf": "config_files", "env": "env_vars",
+                "ps": "processes", "dirs": "framework_paths",
+                "pkg": "package_json",
+            }.get(key)
+            continue
+        if current and line.strip():
+            sections[current].append(line.strip())
+    return sections
+
+
+def collect_ai_signals(ssh_client: SSHClient) -> Optional[list[dict]]:
+    """Run the AI Agent detection probe on the remote host.
+
+    Returns the parsed candidates list (or None on any failure).
+    Never raises — failures are logged at WARN and return None so the
+    rest of the scan flow is unaffected.
+    """
+    from backend.services.ai_agent_scanner import parse_signals  # local import
+
+    probe = (
+        "{"
+        "echo '===CF==='; find /home /opt /root /etc -maxdepth 5 -name '*.json' 2>/dev/null"
+        "  | xargs grep -l 'anthropic\\|openai\\|claude\\|gemini' 2>/dev/null | head -20;"
+        "echo '===ENV==='; env | grep -iE '^(ANTHROPIC|OPENAI|CLAUDE|LANGCHAIN|COHERE|GEMINI)_' | head -20;"
+        "echo '===PS==='; ps -ef | grep -iE 'claude|langchain|autogen|crewai|gpt-|agent' | grep -v grep | head -20;"
+        "echo '===DIRS==='; find / -maxdepth 6 -type d \\( "
+        "  -name 'langchain*' -o -name 'autogen*' -o -name 'crewai*' "
+        "  -o -name 'anthropic*' -o -name 'llamaindex*' \\) 2>/dev/null | head -20;"
+        "echo '===PKG==='; find /home /opt /root -maxdepth 5 -name 'package.json' 2>/dev/null"
+        "  | xargs grep -l '@anthropic-ai\\|langchain\\|openai' 2>/dev/null | head -20;"
+        "}"
+    )
+
+    try:
+        stdin, stdout, stderr = ssh_client.exec_command(probe, timeout=5)
+        raw = stdout.read().decode("utf-8", errors="replace")
+    except Exception as e:
+        logger.warning("AI Agent probe failed: %s", e)
+        return None
+
+    # Normalize the ===SECTION=== output into a dict
+    signals = _parse_probe_output(raw)
+    if not signals:
+        return None
+    return parse_signals({"ai_agent_signals": signals})
