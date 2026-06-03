@@ -52,7 +52,7 @@ class PlaybookUpdate(BaseModel):
     description: Optional[str] = None
     trigger_type: Optional[str] = None
     trigger_filter: Optional[dict] = None
-    steps: list[StepSchema] | None = None
+    steps: Optional[list[StepSchema]] = None
     approval_required: Optional[bool] = None
     enabled: Optional[bool] = None
 
