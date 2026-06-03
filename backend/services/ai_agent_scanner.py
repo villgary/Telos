@@ -13,6 +13,11 @@ import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from backend import models
+
 
 def fingerprint_api_key(key: Optional[str]) -> Optional[str]:
     """Return a 16-char sha256[:16] fingerprint prefixed with 'sha256:',
@@ -338,3 +343,123 @@ def score_risk(
                             "evidence": "Same API key fingerprint on another asset"})
 
     return score, _level_for_score(score), signals
+
+
+# ── Ingest / dedupe / upsert (Task 12) ─────────────────────────────────────
+
+
+def ingest_signals(
+    db: Session,
+    raw_info: dict,
+    asset_id: Optional[int],
+    now: Optional[datetime] = None,
+) -> List[models.AIAgent]:
+    """Parse raw_info signals, dedupe, score, upsert AIAgent rows.
+
+    Returns the list of AIAgent rows that were created or updated.
+    """
+    if not raw_info:
+        return []
+    if now is None:
+        now = datetime.utcnow()
+
+    candidates = parse_signals(raw_info)
+    if not candidates:
+        return []
+
+    # Load existing agents for cross-asset fingerprint comparison
+    all_existing = db.query(models.AIAgent).all()
+    all_agents_for_scoring = [
+        {"asset_id": a.asset_id, "api_key_fingerprint": a.api_key_fingerprint}
+        for a in all_existing
+    ]
+
+    results: List[models.AIAgent] = []
+    for cand in candidates:
+        framework = cand["framework"]
+        agent_name = cand["agent_name"]
+        owner_team = cand.get("owner_team")  # may be None
+
+        # Find existing by dedup key
+        existing = (
+            db.query(models.AIAgent)
+            .filter(
+                models.AIAgent.framework == framework,
+                models.AIAgent.agent_name == agent_name,
+                models.AIAgent.owner_team.is_(None) if owner_team is None
+                else models.AIAgent.owner_team == owner_team,
+                models.AIAgent.asset_id.is_(None) if asset_id is None
+                else models.AIAgent.asset_id == asset_id,
+            )
+            .first()
+        )
+
+        # Score
+        cand_for_score = {**cand, "asset_id": asset_id}
+        score, level, signals = score_risk(cand_for_score, all_agents_for_scoring)
+
+        if existing:
+            existing.last_seen_at = now
+            existing.capabilities = cand["capabilities"]
+            existing.api_key_fingerprint = (
+                cand.get("api_key_fingerprint") or existing.api_key_fingerprint
+            )
+            existing.api_key_location = (
+                cand.get("api_key_location") or existing.api_key_location
+            )
+            existing.risk_score = score
+            existing.risk_level = level
+            existing.risk_signals = signals
+            existing.status = "active"
+            results.append(existing)
+        else:
+            new = models.AIAgent(
+                agent_name=agent_name,
+                framework=framework,
+                model=cand.get("model"),
+                owner_team=owner_team,
+                owner_user=cand.get("owner_user"),
+                api_key_fingerprint=cand.get("api_key_fingerprint"),
+                api_key_location=cand.get("api_key_location"),
+                capabilities=cand["capabilities"],
+                last_invocation_at=cand.get("last_invocation_at"),
+                last_seen_at=now,
+                discovered_at=now,
+                discovery_source="ssh_scan",
+                asset_id=asset_id,
+                risk_score=score,
+                risk_level=level,
+                risk_signals=signals,
+                status="active",
+            )
+            db.add(new)
+            try:
+                db.flush()
+            except IntegrityError:
+                # Race: another tx inserted same dedup key. Refetch and update.
+                db.rollback()
+                existing = (
+                    db.query(models.AIAgent)
+                    .filter(
+                        models.AIAgent.framework == framework,
+                        models.AIAgent.agent_name == agent_name,
+                        models.AIAgent.owner_team.is_(None) if owner_team is None
+                        else models.AIAgent.owner_team == owner_team,
+                        models.AIAgent.asset_id.is_(None) if asset_id is None
+                        else models.AIAgent.asset_id == asset_id,
+                    )
+                    .first()
+                )
+                if existing:
+                    existing.last_seen_at = now
+                    existing.capabilities = cand["capabilities"]
+                    existing.risk_score = score
+                    existing.risk_level = level
+                    existing.risk_signals = signals
+                    existing.status = "active"
+                    results.append(existing)
+            else:
+                results.append(new)
+
+    db.commit()
+    return results
