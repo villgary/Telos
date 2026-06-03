@@ -17,11 +17,40 @@ const LEVEL_COLORS: Record<string, string> = {
   critical: 'red', high: 'orange', medium: 'gold', low: 'green',
 }
 
+interface RiskSignal {
+  signal: string
+  weight: string
+  evidence?: string
+}
+
+interface AIAgent {
+  agent_name: string
+  framework: string
+  risk_level: string
+  status: string
+  owner_user?: string | null
+  owner_team?: string | null
+  model?: string | null
+  last_seen_at: string
+  discovered_at: string
+  capabilities?: {
+    filesystem?: boolean
+    network?: boolean
+    code_exec?: boolean
+    tool_count?: number
+  }
+  api_key_fingerprint?: string | null
+  api_key_location?: string | null
+  risk_signals?: RiskSignal[]
+  asset_id?: number | null
+  nhi_identity_id?: number | null
+}
+
 export default function AIAgentDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [agent, setAgent] = useState<any>(null)
+  const [agent, setAgent] = useState<AIAgent | null>(null)
   const [loading, setLoading] = useState(true)
   const [claiming, setClaiming] = useState(false)
 
@@ -32,7 +61,7 @@ export default function AIAgentDetailPage() {
       const r = await getAIAgent(Number(id))
       setAgent(r.data)
     } catch {
-      message.error('not found')
+      message.error(t('aiAgent.detail.notFound'))
     } finally {
       setLoading(false)
     }
@@ -47,14 +76,14 @@ export default function AIAgentDetailPage() {
       setAgent(r.data)
       message.success(t('aiAgent.detail.owned', { user: r.data.owner_user }))
     } catch {
-      message.error('claim failed')
+      message.error(t('aiAgent.detail.claimFailed'))
     } finally {
       setClaiming(false)
     }
   }
 
   if (loading) return <Spin style={{ width: '100%', marginTop: 80 }} />
-  if (!agent) return <Result status="404" title="Not Found" />
+  if (!agent) return <Result status="404" title={t('aiAgent.detail.notFound')} />
 
   const caps = agent.capabilities || {}
   const signals = agent.risk_signals || []
@@ -129,7 +158,7 @@ export default function AIAgentDetailPage() {
           </div>
           {agent.api_key_location && (
             <div>
-              <Text type="secondary">Location: </Text>
+              <Text type="secondary">{t('aiAgent.detail.location')}: </Text>
               <Text>{agent.api_key_location}</Text>
             </div>
           )}
@@ -138,10 +167,10 @@ export default function AIAgentDetailPage() {
 
       <Card title={t('aiAgent.detail.riskSignals')} size="small" style={{ marginTop: 16 }}>
         {signals.length === 0 ? (
-          <Empty description="No risk signals" />
+          <Empty description={t('aiAgent.detail.noRiskSignals')} />
         ) : (
           <Space direction="vertical" style={{ width: '100%' }}>
-            {signals.map((s: any, i: number) => (
+            {signals.map((s, i) => (
               <div key={i}>
                 <Tag color={LEVEL_COLORS['high']}>{s.weight}</Tag>
                 <Text strong>{s.signal}</Text>
@@ -171,7 +200,7 @@ export default function AIAgentDetailPage() {
       </Card>
 
       <div style={{ marginTop: 16 }}>
-        <Button onClick={() => navigate('/ai-agents')}>← Back</Button>
+        <Button onClick={() => navigate('/ai-agents')}>← {t('aiAgent.detail.back')}</Button>
       </div>
     </div>
   )
