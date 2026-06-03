@@ -172,3 +172,27 @@ class NHILevel(str, enum.Enum):
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
+
+
+class AIAgentFramework(str, enum.Enum):
+    LANGCHAIN = "langchain"
+    AUTOGEN = "autogen"
+    CREWAI = "crewai"
+    CLAUDE_CODE = "claude_code"
+    OPENAI_ASSISTANT = "openai_assistant"
+    LLAMAINDEX = "llamaindex"
+    CUSTOM = "custom"
+    UNKNOWN = "unknown"
+
+
+class AIAgentStatus(str, enum.Enum):
+    ACTIVE = "active"
+    DORMANT = "dormant"
+    DEPRECATED = "deprecated"
+    BLOCKED = "blocked"
+
+
+class AIAgentDiscoverySource(str, enum.Enum):
+    SSH_SCAN = "ssh_scan"
+    API_DISCOVERY = "api_discovery"
+    MANUAL = "manual"
