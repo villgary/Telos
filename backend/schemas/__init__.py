@@ -126,6 +126,7 @@ from backend.schemas.nhi import (
 
 # ── AI Agent schemas ─────────────────────────────────────────────────
 from backend.schemas.ai_agents import (
+    AIAgentBase,
     AIAgentCapabilities, AIAgentResponse, AIAgentDetailResponse,
     AIAgentStatsResponse, AIAgentScanRequest, AIAgentScanResponse,
     AIAgentClaimRequest,
