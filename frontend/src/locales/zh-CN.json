@@ -1611,6 +1611,7 @@
   "canvas": "画布",
   "script": "脚本",
   "nav.nhi": "NHI 非人类身份",
+  "nav.aiAgents": "AI Agent 管理",
   "nhi.title": "非人类身份（NHI）管理",
   "nhi.subtitle": "发现·分类·风险评估·治理",
   "nhi.loading": "加载 NHI 数据...",

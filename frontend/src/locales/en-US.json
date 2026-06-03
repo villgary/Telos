@@ -1603,6 +1603,7 @@
   "canvas": "Canvas",
   "script": "Script",
   "nav.nhi": "NHI Non-Human Identity",
+  "nav.aiAgents": "AI Agent Management",
   "nhi.title": "Non-Human Identity (NHI) Management",
   "nhi.subtitle": "Discover · Classify · Assess Risk · Govern",
   "nhi.loading": "Loading NHI data...",
