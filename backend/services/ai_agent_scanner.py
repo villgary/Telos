@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
 
 
 def fingerprint_api_key(key: Optional[str]) -> Optional[str]:
@@ -250,3 +251,90 @@ def parse_signals(raw_info: dict) -> list[dict]:
             candidates[framework]["capabilities"]["filesystem"] = True
 
     return list(candidates.values())
+
+
+# ── Risk scoring (Task 11) ───────────────────────────────────────────────
+
+
+def _level_for_score(score: int) -> str:
+    if score >= 75:
+        return "critical"
+    if score >= 50:
+        return "high"
+    if score >= 25:
+        return "medium"
+    return "low"
+
+
+def score_risk(
+    agent: dict,
+    all_agents: list[dict],
+) -> Tuple[int, str, List[Dict[str, Any]]]:
+    """Apply 8 rules, return (score, level, signals_list).
+
+    `all_agents` is a list of dicts each with at least
+    {asset_id, api_key_fingerprint} — used for cross-asset dedup signal.
+    """
+    score = 0
+    signals: List[Dict[str, Any]] = []
+
+    # Rule 1: plaintext key in config (40)
+    if "plaintext_key" in (agent.get("evidence") or []):
+        score += 40
+        signals.append({"signal": "plaintext_key", "weight": 40,
+                        "evidence": "API key found in plaintext config file"})
+
+    # Rule 2: no owner (30)
+    if not agent.get("owner_user") and not agent.get("owner_team"):
+        score += 30
+        signals.append({"signal": "no_owner", "weight": 30,
+                        "evidence": "No owner_user and no owner_team set"})
+
+    caps = agent.get("capabilities") or {}
+
+    # Rule 3: code_exec (25)
+    if caps.get("code_exec"):
+        score += 25
+        signals.append({"signal": "code_exec", "weight": 25,
+                        "evidence": "Agent has code execution capability"})
+
+    # Rule 4: network (15)
+    if caps.get("network"):
+        score += 15
+        signals.append({"signal": "network", "weight": 15,
+                        "evidence": "Agent has network capability"})
+
+    # Rule 5: filesystem (10)
+    if caps.get("filesystem"):
+        score += 10
+        signals.append({"signal": "filesystem", "weight": 10,
+                        "evidence": "Agent has filesystem capability"})
+
+    # Rule 6: multi-agent framework (15)
+    if agent.get("framework") in ("autogen", "crewai"):
+        score += 15
+        signals.append({"signal": "multi_agent_framework", "weight": 15,
+                        "evidence": f"Framework={agent.get('framework')} (multi-agent)"})
+
+    # Rule 7: dormant > 30 days (15)
+    last_inv = agent.get("last_invocation_at")
+    if last_inv and isinstance(last_inv, datetime):
+        if datetime.utcnow() - last_inv > timedelta(days=30):
+            score += 15
+            signals.append({"signal": "dormant", "weight": 15,
+                            "evidence": f"last_invocation_at={last_inv} (>30d)"})
+
+    # Rule 8: same fingerprint on another asset (20)
+    fp = agent.get("api_key_fingerprint")
+    if fp:
+        same_on_other = any(
+            a.get("api_key_fingerprint") == fp
+            and a.get("asset_id") != agent.get("asset_id")
+            for a in all_agents
+        )
+        if same_on_other:
+            score += 20
+            signals.append({"signal": "shared_fingerprint", "weight": 20,
+                            "evidence": "Same API key fingerprint on another asset"})
+
+    return score, _level_for_score(score), signals
