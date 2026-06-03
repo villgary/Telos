@@ -78,3 +78,8 @@ class AIAgentScanResponse(BaseModel):
 class AIAgentClaimRequest(BaseModel):
     """Sets owner_user to the current authenticated user."""
     pass
+
+
+class AIAgentListResponse(BaseModel):
+    total: int
+    agents: List[AIAgentResponse]
