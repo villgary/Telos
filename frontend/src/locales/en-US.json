@@ -1635,7 +1635,7 @@
   "aiAgent.detail.relatedAsset": "Related Asset",
   "aiAgent.detail.relatedNHI": "Related NHI",
   "aiAgent.detail.claimOwner": "Claim Owner",
-  "aiAgent.detail.owned": "Owned by {user}",
+  "aiAgent.detail.owned": "Owned by {{user}}",
   "aiAgent.detail.fingerprint": "Key Fingerprint",
   "aiAgent.detail.noKey": "No key detected",
   "aiAgent.detail.model": "Model",

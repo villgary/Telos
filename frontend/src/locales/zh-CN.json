@@ -1643,7 +1643,7 @@
   "aiAgent.detail.relatedAsset": "关联资产",
   "aiAgent.detail.relatedNHI": "关联 NHI",
   "aiAgent.detail.claimOwner": "认领 Owner",
-  "aiAgent.detail.owned": "Owner: {user}",
+  "aiAgent.detail.owned": "Owner: {{user}}",
   "aiAgent.detail.fingerprint": "密钥指纹",
   "aiAgent.detail.noKey": "未检测到密钥",
   "aiAgent.detail.model": "模型",

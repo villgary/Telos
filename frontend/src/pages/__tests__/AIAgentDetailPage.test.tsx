@@ -66,8 +66,6 @@ describe('AIAgentDetailPage', () => {
       expect(screen.getByText('OwnedAgent')).toBeInTheDocument()
     })
     expect(screen.queryByText('Claim Owner')).not.toBeInTheDocument()
-    // The "owned" template interpolates {user}; the user value is what we
-    // ultimately want to confirm is on screen.
-    expect(screen.getByText('alice')).toBeInTheDocument()
+    expect(screen.getByText('Owned by alice')).toBeInTheDocument()
   })
 })
