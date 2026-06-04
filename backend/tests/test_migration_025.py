@@ -82,9 +82,20 @@ def test_migration_025_upgrade_then_downgrade(db_path, alembic_cfg):
     ai_cols = {c["name"] for c in insp.get_columns("ai_agents")}
     assert "connection_id" in ai_cols
 
+    fk_names = {fk["name"] for fk in insp.get_foreign_keys("ai_agents")}
+    assert "fk_ai_agents_connection_id" in fk_names
+
     conn_indexes = {ix["name"] for ix in insp.get_indexes("cloud_connections")}
     assert "ix_cloud_connections_provider" in conn_indexes
     assert "ix_cloud_connections_fingerprint" in conn_indexes
+
+    audit_indexes = {ix["name"] for ix in insp.get_indexes("cloud_connection_audit_log")}
+    assert "ix_cloud_audit_connection" in audit_indexes
+    assert "ix_cloud_audit_actor" in audit_indexes
+    assert "ix_cloud_audit_created" in audit_indexes
+
+    ai_indexes = {ix["name"] for ix in insp.get_indexes("ai_agents")}
+    assert "ix_ai_agents_connection" in ai_indexes
 
     command.downgrade(alembic_cfg, "024_ai_agents")
     insp2 = inspect(engine)
@@ -92,3 +103,6 @@ def test_migration_025_upgrade_then_downgrade(db_path, alembic_cfg):
     assert "cloud_connections" not in tables2
     assert "cloud_connection_audit_log" not in tables2
     assert "connection_id" not in {c["name"] for c in insp2.get_columns("ai_agents")}
+    # FK on connection_id should be gone
+    fk_names_after = {fk["name"] for fk in insp2.get_foreign_keys("ai_agents")}
+    assert "fk_ai_agents_connection_id" not in fk_names_after
