@@ -30,7 +30,7 @@ def _make_connection(name="acme-prod", provider="anthropic"):
 
 def test_happy_path_produces_one_raw_agent_per_project_key():
     conn = _make_connection()
-    # Two projects, two keys each = 4 agents
+    # 2 projects: proj-1 has 2 keys, proj-2 has 1 key → 3 agents
     responses = {
         "/v1/organizations": {"data": [{"id": "org-1", "name": "Acme"}], "has_more": False},
         "/v1/organizations/org-1/projects": {
