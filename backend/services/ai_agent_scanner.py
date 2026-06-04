@@ -349,7 +349,12 @@ def score_risk(
     return score, _level_for_score(score), signals
 
 
-def score_cloud_risk(agent_dict, connection, all_agents, all_agents_for_connection):
+def score_cloud_risk(
+    agent_dict: dict,
+    connection: "models.CloudConnection",
+    all_agents: list,
+    all_agents_for_connection: list,
+) -> Tuple[int, str, list]:
     """Score the 2 cloud-channel rules, additive to the v1 score_risk output.
 
     `all_agents_for_connection` is the list of agents that belong to the
@@ -359,7 +364,7 @@ def score_cloud_risk(agent_dict, connection, all_agents, all_agents_for_connecti
     score = 0
     signals = []
 
-    # Rule 9: single-agent connection with code_exec capability (+10, medium)
+    # Rule 9: single-agent connection with code_exec capability (+10)
     caps = agent_dict.get("capabilities") or {}
     if (
         len(all_agents_for_connection) == 1
@@ -372,7 +377,7 @@ def score_cloud_risk(agent_dict, connection, all_agents, all_agents_for_connecti
             "evidence": "Connection has exactly one agent AND it has code_exec capability",
         })
 
-    # Rule 10: cross-connection key reuse (+20, high)
+    # Rule 10: cross-connection key reuse (+20)
     fp = agent_dict.get("api_key_fingerprint")
     if fp:
         same_on_other_conn = any(
@@ -560,11 +565,10 @@ def ingest_cloud_agents(
         post_ingest_conn_agents = list(conn_agents)
         if existing is None:
             post_ingest_conn_agents.append(agent_for_score)
-        base_score, base_level, base_signals = score_risk(agent_for_score, all_agents_for_scoring)
-        cloud_score, cloud_level, cloud_signals = score_cloud_risk(
+        base_score, _base_level, base_signals = score_risk(agent_for_score, all_agents_for_scoring)
+        cloud_score, _cloud_level, cloud_signals = score_cloud_risk(
             agent_for_score, connection, all_agents_for_scoring, post_ingest_conn_agents
         )
-        # Cloud rules override base level (cloud rules are higher-severity)
         total_score = base_score + cloud_score
         total_level = _level_for_score(total_score)
         all_signals = base_signals + cloud_signals

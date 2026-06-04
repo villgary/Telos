@@ -11,7 +11,6 @@ Verifies:
 import os
 import sys
 from datetime import datetime
-from unittest.mock import MagicMock
 
 os.environ.setdefault("ACCOUNTSCAN_MASTER_KEY", "test_master_key_0123456789abcdef01234567")
 os.environ.setdefault("ACCOUNTSCAN_JWT_SECRET", "test_jwt_secret_0123456789abcdef0123456")
