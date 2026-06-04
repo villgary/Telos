@@ -26,13 +26,6 @@ def _make_response(status_code: int, json_data=None):
     return resp
 
 
-def _make_connection():
-    return MagicMock(
-        id=1, name="test-conn", provider="anthropic",
-        encrypted_api_key="ignored", api_key_fingerprint="deadbeef" * 2,
-    )
-
-
 class _FakeConnection:
     def __init__(self, provider="anthropic"):
         self.provider = provider
