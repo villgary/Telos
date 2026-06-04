@@ -63,7 +63,6 @@ class SchedulerService:
         self._scheduler.add_job(run_monitor, "interval", minutes=5, id="realtime_monitor")
 
         # Cloud connection discovery — every 6 hours
-        from backend.services.scheduler_service import _sync_all_cloud_connections
         self._scheduler.add_job(
             _sync_all_cloud_connections, "interval", hours=6,
             id="cloud_connection_sync", replace_existing=True,
@@ -235,7 +234,6 @@ def _sync_all_cloud_connections():
 
     Called every 6h by the scheduler.
     """
-    from backend.database import SessionLocal
     from backend.services.ai_agent_scanner import ingest_cloud_agents
     db = SessionLocal()
     try:
@@ -246,11 +244,6 @@ def _sync_all_cloud_connections():
                 conn.last_sync_status = "running"
                 db.commit()
 
-                # Pre-snapshot for discovered vs updated counts
-                pre_existing_ids = {
-                    row[0] for row in db.query(models.AIAgent.id)
-                    .filter(models.AIAgent.connection_id == conn.id).all()
-                }
                 try:
                     raws = cloud_discover(conn)
                 except FatalDiscoveryError as e:
@@ -266,9 +259,7 @@ def _sync_all_cloud_connections():
                     db.commit()
                     continue
 
-                ingested = ingest_cloud_agents(db, conn, raws)
-                discovered = sum(1 for a in ingested if a.id not in pre_existing_ids)
-                updated = sum(1 for a in ingested if a.id in pre_existing_ids)
+                ingest_cloud_agents(db, conn, raws)
 
                 conn.last_sync_at = datetime.now(timezone.utc)
                 conn.last_sync_status = "success"
