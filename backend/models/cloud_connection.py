@@ -36,6 +36,7 @@ class CloudConnectionAuditLog(Base):
     __table_args__ = (
         Index("ix_cloud_audit_connection", "connection_id"),
         Index("ix_cloud_audit_actor", "actor_user_id"),
+        Index("ix_cloud_audit_created", "created_at"),
     )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
