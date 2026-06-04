@@ -7,6 +7,7 @@ from typing import Callable, List, TypeVar
 
 import httpx
 
+from backend import models
 from backend.services import crypto
 from backend.services.cloud_discovery import RawAgent
 
@@ -26,10 +27,11 @@ T = TypeVar("T")
 
 
 def _retry_with_backoff(fn: Callable[[], T], max_attempts: int = 3) -> T:
-    """Run fn() with exponential backoff (1s, 2s, 4s) on RetryableError.
+    """Run fn() with exponential backoff (delays double from 1s) on RetryableError.
 
-    Re-raises the last RetryableError if all attempts fail. FatalDiscoveryError
-    propagates immediately.
+    With max_attempts=N, sleeps N-1 times between failed attempts at delays
+    1s, 2s, 4s, 8s, ... Re-raises the last RetryableError if all attempts
+    fail. FatalDiscoveryError propagates immediately.
     """
     delay = 1.0
     last_exc: Exception | None = None
@@ -58,7 +60,7 @@ class CloudDiscoveryBase:
     PROVIDER_NAME: str = ""  # set by subclass
     BASE_URL: str = ""
 
-    def __init__(self, connection):
+    def __init__(self, connection: "models.CloudConnection"):
         self.connection = connection
         self._api_key = crypto.decrypt(connection.encrypted_api_key)
 
