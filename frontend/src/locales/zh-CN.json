@@ -1615,7 +1615,7 @@
   "aiAgent.title": "AI Agent 管理",
   "aiAgent.subtitle": "发现·分类·风险评估·治理",
   "aiAgent.scan": "扫描 AI Agent",
-  "aiAgent.scanSuccess": "扫描完成：新增 {discovered} 个，更新 {updated} 个",
+  "aiAgent.scanSuccess": "扫描完成：新增 {{discovered}} 个，更新 {{updated}} 个",
   "aiAgent.totalAgents": "AI Agent 总数",
   "aiAgent.activeAgents": "活跃 Agent",
   "aiAgent.criticalRisk": "严重风险",

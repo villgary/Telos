@@ -1607,7 +1607,7 @@
   "aiAgent.title": "AI Agent Management",
   "aiAgent.subtitle": "Discover · Classify · Assess Risk · Govern",
   "aiAgent.scan": "Scan AI Agents",
-  "aiAgent.scanSuccess": "Scan complete: {discovered} new, {updated} updated",
+  "aiAgent.scanSuccess": "Scan complete: {{discovered}} new, {{updated}} updated",
   "aiAgent.totalAgents": "Total AI Agents",
   "aiAgent.activeAgents": "Active Agents",
   "aiAgent.criticalRisk": "Critical Risk",
