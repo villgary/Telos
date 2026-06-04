@@ -57,21 +57,28 @@ def upgrade() -> None:
     op.create_index("ix_cloud_audit_actor", "cloud_connection_audit_log", ["actor_user_id"])
     op.create_index("ix_cloud_audit_created", "cloud_connection_audit_log", ["created_at"])
 
-    op.add_column(
-        "ai_agents",
-        sa.Column(
-            "connection_id",
-            sa.Integer,
-            sa.ForeignKey("cloud_connections.id", ondelete="SET NULL"),
-            nullable=True,
-        ),
-    )
+    # SQLite can't ALTER TABLE ADD COLUMN with a foreign-key constraint,
+    # so route the add through batch mode (a no-op on PostgreSQL). The FK
+    # is added as a separately named constraint because alembic's batch
+    # copy-and-move strategy requires named constraints.
+    with op.batch_alter_table("ai_agents") as batch:
+        batch.add_column(sa.Column("connection_id", sa.Integer, nullable=True))
+        batch.create_foreign_key(
+            "fk_ai_agents_connection_id",
+            "cloud_connections",
+            ["connection_id"],
+            ["id"],
+            ondelete="SET NULL",
+        )
     op.create_index("ix_ai_agents_connection", "ai_agents", ["connection_id"])
 
 
 def downgrade() -> None:
     op.drop_index("ix_ai_agents_connection", table_name="ai_agents")
-    op.drop_column("ai_agents", "connection_id")
+    # SQLite can't ALTER TABLE DROP COLUMN on a column that still has a
+    # foreign-key definition; route it through batch mode.
+    with op.batch_alter_table("ai_agents") as batch:
+        batch.drop_column("connection_id")
     op.drop_index("ix_cloud_audit_created", table_name="cloud_connection_audit_log")
     op.drop_index("ix_cloud_audit_actor", table_name="cloud_connection_audit_log")
     op.drop_index("ix_cloud_audit_connection", table_name="cloud_connection_audit_log")
