@@ -61,7 +61,7 @@
                      ▼
                 CloudConnection row
                 (encrypted admin key,
-                 last_sync_state)
+                 last_sync state)
                      │
                      ▼
                 ai_agents table
@@ -71,15 +71,17 @@
                  agent_name = '{conn.name} / {project} / {key-fp[:8]}')
 
                      │
-                     ▼
-                Alert / Audit
-                (shared layer, unchanged)
+        ┌────────────┼────────────┐
+        ▼                         ▼
+   Alert (existing,         cloud_connection_audit_log
+   reused — high-risk      (new — per-connection
+   agent discovered)         change history)
 ```
 
 **Key shape decisions:**
 
 - **Reuse the v1 AIAgent table.** No new agent-shaped table — cloud-discovered agents live alongside SSH-discovered ones, distinguished only by `framework` and `discovery_source`. This means the v1 list page, detail page, and stats all show cloud agents with zero frontend changes.
-- **Asset is NULL for cloud agents.** There is no host. The dedup key `(framework, agent_name, owner_team, asset_id)` collapses cleanly when `asset_id IS NULL` — re-syncs update the same row instead of duplicating.
+- **Asset is NULL for cloud agents.** There is no host. The v1 dedup key `(framework, agent_name, owner_team, asset_id)` does **not** collapse on `asset_id IS NULL` — standard SQL treats NULLs as distinct in unique constraints, so re-syncs would duplicate rows. `ingest_cloud_agents` therefore does an explicit "find existing by `(framework, agent_name) WHERE asset_id IS NULL`" lookup before the upsert. (A future DB-level fix — partial unique index — is out of scope for v2.)
 - **Synthetic `agent_name`** — `"{connection.name} / {project_label} / {key_fingerprint[:8]}"`. Stable per sync, so re-syncs update, not insert. The full 16-char fingerprint is stored in the existing `api_key_fingerprint` column.
 - **Per-provider modules** rather than a single dispatcher. Each provider is a small class implementing a `discover(connection) -> list[RawAgent]` interface, peer to the way `ssh_scanner` is one module per protocol family.
 - **Encryption is opaque to the rest of the system.** `CloudConnection.encrypted_api_key` is a base64 string holding the AES-256-GCM ciphertext (nonce + ct + tag), encrypted with the same `ACCOUNTSCAN_MASTER_KEY` used elsewhere. Only the `cloud_discovery` modules ever decrypt.
@@ -98,7 +100,7 @@
 | `backend/services/cloud_discovery/base.py` | `CloudDiscoveryBase` abstract base — common retry / timeout / fingerprint helpers |
 | `backend/services/cloud_discovery/anthropic.py` | `AnthropicDiscovery` — calls Anthropic Admin API |
 | `backend/services/cloud_discovery/openai.py` | `OpenAIDiscovery` — calls OpenAI Admin API |
-| `backend/services/crypto.py` | Tiny wrapper around `ACCOUNTSCAN_MASTER_KEY` (encrypt / decrypt / fingerprint); reused by tests |
+| `backend/services/crypto.py` | Tiny wrapper that re-exports the existing `backend/encryption.py` `encrypt` / `decrypt` plus a `fingerprint(plaintext) -> str` helper; the cloud-discovery code imports from here so test coverage has a single seam |
 | `backend/routers/ai_agent_connections.py` | REST: list / create / update / delete / sync-now / audit-log |
 | `backend/alembic/versions/025_cloud_connections.py` | Two new tables + indexes |
 
@@ -251,7 +253,7 @@ class CloudConnectionAuditLog(Base):
 - `test_cloud_discovery_base.py` — retry-with-backoff, timeout, fingerprint helper (`sha256[:16]`), `RawAgent` dataclass.
 - `test_cloud_discovery_anthropic.py` — mocked `httpx` returning canned Anthropic Admin responses (orgs, projects, keys). Assert one `RawAgent` per (project, key) pair, fingerprint stable across re-runs, 401 + 429 + 5xx paths.
 - `test_cloud_discovery_openai.py` — same shape as Anthropic, with OpenAI's response schema.
-- `test_ai_agent_cloud_ingest.py` — given a `CloudConnection` and a list of `RawAgent`, assert the right `AIAgent` rows are written, dedup works (re-run → update, not insert), `asset_id=NULL`, `framework='cloud_<provider>'`, `discovery_source='api_discovery'`.
+- `test_ai_agent_cloud_ingest.py` — given a `CloudConnection` and a list of `RawAgent`, assert the right `AIAgent` rows are written, dedup works (re-run → update, not insert, via the explicit `(framework, agent_name) WHERE asset_id IS NULL` lookup — not relying on DB unique-constraint behavior), `asset_id=NULL`, `framework='cloud_<provider>'`, `discovery_source='api_discovery'`.
 - `test_ai_agent_connections_router.py` — list, create (encrypted on disk), update (name only, key rejected), rotate, delete (soft), sync-now (success / auth_failed / rate_limited / partial).
 - `test_ai_agent_connections_audit.py` — every state-changing endpoint writes exactly one audit row with the correct `action`, `actor_user_id`, and never contains plaintext key material.
 - `test_migration_025.py` — up + down with SQLite (peer to `test_migration_024`).
