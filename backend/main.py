@@ -353,8 +353,8 @@ app.include_router(knowledge_base.router)
 app.include_router(identity_threat.router)
 app.include_router(playbooks.router)
 app.include_router(nhi.router)
-app.include_router(ai_agents.router)
 app.include_router(ai_agent_connections.router)
+app.include_router(ai_agents.router)
 
 
 # ── Health check (enhanced) ─────────────────────────────────────
