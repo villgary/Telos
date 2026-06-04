@@ -43,13 +43,11 @@ class AIAgent(Base):
         Integer,
         ForeignKey("cloud_connections.id", ondelete="SET NULL"),
         nullable=True,
-        index=True,
     )
-
-    connection = relationship("CloudConnection", back_populates="agents")
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     asset = relationship("Asset")
     nhi = relationship("NHIIdentity")
+    connection = relationship("CloudConnection", back_populates="agents")

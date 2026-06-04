@@ -1,7 +1,7 @@
 """Cloud connection + audit-log ORM models — peer to NHI for provider-side AI Agent discovery."""
 from datetime import datetime
 from sqlalchemy import (
-    Column, Integer, String, DateTime, ForeignKey, Text, JSON, UniqueConstraint, Index,
+    Column, Integer, String, DateTime, ForeignKey, Text, JSON, UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 
@@ -27,7 +27,7 @@ class CloudConnection(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    created_by = relationship("User", foreign_keys=[created_by_user_id])
+    created_by = relationship("User")
     agents = relationship("AIAgent", back_populates="connection", passive_deletes=True)
 
 
