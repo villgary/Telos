@@ -1,7 +1,7 @@
 """Cloud connection + audit-log ORM models — peer to NHI for provider-side AI Agent discovery."""
 from datetime import datetime
 from sqlalchemy import (
-    Column, Integer, String, DateTime, ForeignKey, Text, JSON, UniqueConstraint,
+    Column, Integer, String, DateTime, ForeignKey, Text, JSON, UniqueConstraint, Index,
 )
 from sqlalchemy.orm import relationship
 
@@ -33,15 +33,18 @@ class CloudConnection(Base):
 
 class CloudConnectionAuditLog(Base):
     __tablename__ = "cloud_connection_audit_log"
+    __table_args__ = (
+        Index("ix_cloud_audit_connection", "connection_id"),
+        Index("ix_cloud_audit_actor", "actor_user_id"),
+    )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     connection_id = Column(
         Integer,
         ForeignKey("cloud_connections.id", ondelete="SET NULL"),
         nullable=True,
-        index=True,
     )
-    actor_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    actor_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     action = Column(String(32), nullable=False)  # created|renamed|rotated|deleted|sync_started|sync_finished
     status = Column(String(16), nullable=True)  # success|partial|failed|auth_failed|rate_limited
     before = Column(JSON, nullable=True)  # name only — never the key
