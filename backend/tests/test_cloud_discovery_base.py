@@ -16,6 +16,7 @@ from backend.services.cloud_discovery import base
 from backend.services.cloud_discovery.base import (
     CloudDiscoveryBase, RetryableError, FatalDiscoveryError,
 )
+from backend.services import crypto
 
 
 def _make_response(status_code: int, json_data=None):
@@ -32,8 +33,50 @@ def _make_connection():
     )
 
 
-def test_base_module_imports():
-    assert base is not None
+class _FakeConnection:
+    def __init__(self, provider="anthropic"):
+        self.provider = provider
+        # Use a real ciphertext so CloudDiscoveryBase.__init__'s decrypt() succeeds;
+        # the dispatch tests patch .run, but __init__ runs before that.
+        self.encrypted_api_key = crypto.encrypt("ignored")
+        self.api_key_fingerprint = "deadbeef" * 2  # 16 chars
+        self.id = 1
+        self.name = "test-conn"
+
+
+def test_dispatch_anthropic_returns_raw_agents(monkeypatch):
+    from backend.services.cloud_discovery import discover
+    fake = _FakeConnection(provider="anthropic")
+    monkeypatch.setattr(
+        "backend.services.cloud_discovery.anthropic.AnthropicDiscovery.run",
+        lambda self: [base.RawAgent(provider="anthropic", project_label="p",
+                                     agent_name="test-conn / p / 12345678",
+                                     api_key_fingerprint="1234567890abcdef")],
+    )
+    out = discover(fake)
+    assert len(out) == 1
+    assert out[0].provider == "anthropic"
+
+
+def test_dispatch_openai_returns_raw_agents(monkeypatch):
+    from backend.services.cloud_discovery import discover
+    fake = _FakeConnection(provider="openai")
+    monkeypatch.setattr(
+        "backend.services.cloud_discovery.openai.OpenAIDiscovery.run",
+        lambda self: [base.RawAgent(provider="openai", project_label="proj",
+                                     agent_name="test-conn / proj / abcdef12",
+                                     api_key_fingerprint="abcdef1234567890")],
+    )
+    out = discover(fake)
+    assert len(out) == 1
+    assert out[0].provider == "openai"
+
+
+def test_dispatch_unknown_provider_raises():
+    from backend.services.cloud_discovery import discover
+    fake = _FakeConnection(provider="bogus")
+    with pytest.raises(ValueError, match="Unsupported cloud provider"):
+        discover(fake)
 
 
 def test_retry_with_backoff_eventually_succeeds(monkeypatch):
