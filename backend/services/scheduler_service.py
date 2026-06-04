@@ -12,6 +12,10 @@ from apscheduler.triggers.cron import CronTrigger
 from backend.database import SessionLocal
 from backend import models
 from backend.services import alert_service
+from backend.services.cloud_discovery import discover as cloud_discover
+from backend.services.cloud_discovery.base import (
+    FatalDiscoveryError, RetryableError,
+)
 from backend.services.diff_engine import compute_diff
 
 logger = logging.getLogger(__name__)
@@ -57,6 +61,13 @@ class SchedulerService:
         # Real-time threat monitor — every 5 minutes
         from backend.services.realtime_monitor import run_monitor
         self._scheduler.add_job(run_monitor, "interval", minutes=5, id="realtime_monitor")
+
+        # Cloud connection discovery — every 6 hours
+        from backend.services.scheduler_service import _sync_all_cloud_connections
+        self._scheduler.add_job(
+            _sync_all_cloud_connections, "interval", hours=6,
+            id="cloud_connection_sync", replace_existing=True,
+        )
 
         logger.info("Scheduler started")
 
@@ -215,6 +226,66 @@ def _check_review_reminders():
             logger.info(f"Scheduled reviews triggered: {result}")
     except Exception as e:
         logger.warning(f"Review reminder check failed: {e}")
+    finally:
+        db.close()
+
+
+def _sync_all_cloud_connections():
+    """Fan out a sync to every CloudConnection. One failure does not block others.
+
+    Called every 6h by the scheduler.
+    """
+    from backend.database import SessionLocal
+    from backend.services.ai_agent_scanner import ingest_cloud_agents
+    db = SessionLocal()
+    try:
+        connections = db.query(models.CloudConnection).all()
+        for conn in connections:
+            try:
+                conn.last_sync_started_at = datetime.now(timezone.utc)
+                conn.last_sync_status = "running"
+                db.commit()
+
+                # Pre-snapshot for discovered vs updated counts
+                pre_existing_ids = {
+                    row[0] for row in db.query(models.AIAgent.id)
+                    .filter(models.AIAgent.connection_id == conn.id).all()
+                }
+                try:
+                    raws = cloud_discover(conn)
+                except FatalDiscoveryError as e:
+                    conn.last_sync_at = datetime.now(timezone.utc)
+                    conn.last_sync_status = "failed"
+                    conn.last_sync_error = f"auth_failed: {e}"[:256]
+                    db.commit()
+                    continue
+                except RetryableError as e:
+                    conn.last_sync_at = datetime.now(timezone.utc)
+                    conn.last_sync_status = "failed"
+                    conn.last_sync_error = f"rate_limited_or_transient: {e}"[:256]
+                    db.commit()
+                    continue
+
+                ingested = ingest_cloud_agents(db, conn, raws)
+                discovered = sum(1 for a in ingested if a.id not in pre_existing_ids)
+                updated = sum(1 for a in ingested if a.id in pre_existing_ids)
+
+                conn.last_sync_at = datetime.now(timezone.utc)
+                conn.last_sync_status = "success"
+                conn.last_sync_error = None
+                db.commit()
+            except Exception as e:
+                logger.warning(
+                    "Scheduled cloud sync failed for connection %s: %s",
+                    conn.id, e,
+                )
+                db.rollback()
+                try:
+                    conn.last_sync_status = "failed"
+                    conn.last_sync_error = f"unexpected: {e!r}"[:256]
+                    db.commit()
+                except Exception:
+                    db.rollback()
     finally:
         db.close()
 
