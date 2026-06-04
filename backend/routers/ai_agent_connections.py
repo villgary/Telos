@@ -164,11 +164,6 @@ async def update_connection(
         models.CloudConnection.id == connection_id).first()
     if not conn:
         raise HTTPException(status_code=404, detail="connection not found")
-    if "api_key" in body.model_fields_set:
-        raise HTTPException(
-            status_code=400,
-            detail="api_key is write-only; use POST /connections/{id}/rotate to replace the key",
-        )
     before_name = conn.name
     conn.name = body.name
     _write_audit(db, conn.id, user.id, "renamed",

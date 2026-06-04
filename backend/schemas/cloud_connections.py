@@ -21,6 +21,8 @@ class CloudConnectionUpdate(BaseModel):
     """PATCH — name only. To replace the key, call /rotate."""
     name: str = Field(..., min_length=1, max_length=64)
 
+    model_config = {"extra": "forbid"}
+
 
 class CloudConnectionRotate(BaseModel):
     api_key: str = Field(..., min_length=1, max_length=512)
