@@ -296,18 +296,18 @@ const HELP_CONTENT: Record<string, HelpContent> = {
   },
 }
 
-function renderContent(content: HelpContent): ReactNode {
+function renderContent(content: HelpContent, t: (key: string) => string): ReactNode {
   return (
     <>
       {content.paragraphs.map((key, i) => (
-        <Paragraph key={i}>{key}</Paragraph>
+        <Paragraph key={i}>{t(key)}</Paragraph>
       ))}
       {content.lists?.map((list) => (
         <List key={list.key} size="small" bordered>
           {list.items.map((item, i) => (
             <List.Item key={i}>
-              {item.label && <Tag>{item.label}</Tag>}
-              <Text>{item.text}</Text>
+              {item.label && <Tag>{t(item.label)}</Tag>}
+              <Text>{t(item.text)}</Text>
             </List.Item>
           ))}
         </List>
@@ -334,7 +334,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
       onClose={onClose}
       open={open}
     >
-      {renderContent(content)}
+      {renderContent(content, t)}
     </Drawer>
   )
 }

@@ -124,5 +124,14 @@ from backend.schemas.nhi import (
     NHIPolicyCreate, NHIPolicyResponse,
 )
 
+# ── AI Agent schemas ─────────────────────────────────────────────────
+from backend.schemas.ai_agents import (
+    AIAgentBase,
+    AIAgentCapabilities, AIAgentResponse, AIAgentDetailResponse,
+    AIAgentListResponse,
+    AIAgentStatsResponse, AIAgentScanRequest, AIAgentScanResponse,
+    AIAgentClaimRequest,
+)
+
 # ── Error schemas ─────────────────────────────────────────────────────
 from backend.schemas.errors import ErrorResponse, ValidationErrorItem, ValidationErrorResponse

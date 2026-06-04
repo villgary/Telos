@@ -665,6 +665,26 @@ export const createNHIPolicy = (data: {
   require_monitoring?: boolean
 }) => api.post('/nhi/policies', data)
 
+// ── AI Agent Module ──────────────────────────────────────────────────────────
+
+export const listAIAgents = (params?: {
+  framework?: string
+  risk_level?: string
+  status?: string
+  owner_team?: string
+  limit?: number
+  offset?: number
+}) => api.get('/ai-agents', { params })
+
+export const getAIAgentsStats = () => api.get('/ai-agents/stats')
+
+export const getAIAgent = (id: number) => api.get(`/ai-agents/${id}`)
+
+export const claimAIAgent = (id: number) => api.post(`/ai-agents/${id}/claim`)
+
+export const triggerAIAgentScan = (asset_id?: number) =>
+  api.post('/ai-agents/scan', { asset_id })
+
 // ── Alert Actions ─────────────────────────────────────────────────────────────
 
 export const acknowledgeAlert = (id: number) =>

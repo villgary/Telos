@@ -105,3 +105,6 @@ from backend.models.nhi import (
     NHIAlert,
     NHIPolicy,
 )
+
+# ── AI Agent models ───────────────────────────────────────────────────
+from backend.models.ai_agents import AIAgent

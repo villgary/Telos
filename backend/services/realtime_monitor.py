@@ -51,6 +51,8 @@ class RealtimeMonitor:
         created += self._detect_credential_findings(db)
         created += self._detect_dormant_reactivated(db)
         created += self._detect_orphan_accounts(db)
+        created += self._detect_new_ai_agents(db)
+        created += self._detect_dormant_ai_agents(db)
         return created
 
     # ── Detector helpers ──────────────────────────────────────────────────────────
@@ -501,6 +503,110 @@ class RealtimeMonitor:
                 snap.username, snap.asset_id,
             )
 
+        return created
+
+    # ── 6. New AI Agent discovered (high/critical risk) ──────────────────
+
+    def _detect_new_ai_agents(self, db: Session) -> int:
+        """Alert when a high/critical risk AI Agent is discovered.
+
+        Only fires for agents whose risk_level is high or critical, since
+        low/medium are expected background noise.
+        """
+        created = 0
+        risky = (
+            db.query(models.AIAgent)
+            .filter(
+                models.AIAgent.risk_level.in_(["high", "critical"]),
+                models.AIAgent.status == "active",
+            )
+            .all()
+        )
+        for agent in risky:
+            # Avoid duplicate alerts: skip if an alert with this message already exists
+            existing = (
+                db.query(models.Alert)
+                .filter(
+                    models.Alert.message.like(f"%AI Agent「{agent.agent_name}」%"),
+                    models.Alert.status != "dismissed",
+                )
+                .first()
+            )
+            if existing:
+                continue
+            job = self._latest_job_for_asset(db, agent.asset_id) if agent.asset_id else None
+            alert = self._create_alert(
+                db, agent.asset_id or 0, AlertLevel.high,
+                f"高风险 AI Agent「{agent.agent_name}」",
+                f"资产 #{agent.asset_id} 上的 AI Agent「{agent.agent_name}」"
+                f"({agent.framework}) 风险等级 {agent.risk_level}，请确认是否经授权。",
+                job_id=job.id if job else None,
+                title_key="alert.aiAgent.discovered",
+                title_params={"agent_name": agent.agent_name},
+                message_key="alert.msg.aiAgent.discovered",
+                message_params={
+                    "agent_name": agent.agent_name,
+                    "asset_id": agent.asset_id,
+                    "framework": agent.framework,
+                    "risk_level": agent.risk_level,
+                },
+            )
+            created += 1
+            logger.info("Alert: new high-risk AI Agent %s on asset %s",
+                        agent.agent_name, agent.asset_id)
+        return created
+
+    # ── 7. AI Agent dormant > 90 days ─────────────────────────────────────
+
+    def _detect_dormant_ai_agents(self, db: Session) -> int:
+        """Alert when an AI Agent hasn't been invoked for > 90 days."""
+        created = 0
+        cutoff = datetime.now(timezone.utc) - timedelta(days=90)
+        # Use a tolerant comparison: compare naive datetimes
+        cutoff_naive = cutoff.replace(tzinfo=None) if cutoff.tzinfo else cutoff
+
+        dormant = (
+            db.query(models.AIAgent)
+            .filter(
+                models.AIAgent.status == "dormant",
+                models.AIAgent.last_invocation_at.isnot(None),
+            )
+            .all()
+        )
+        for agent in dormant:
+            last = _naive(agent.last_invocation_at)
+            if last is None or last > cutoff_naive:
+                continue
+            # Dedup: skip if an alert for this dormant agent already exists
+            existing = (
+                db.query(models.Alert)
+                .filter(
+                    models.Alert.message.like(f"%AI Agent「{agent.agent_name}」%"),
+                    models.Alert.message.like("%dormant%"),
+                    models.Alert.status != "dismissed",
+                )
+                .first()
+            )
+            if existing:
+                continue
+            job = self._latest_job_for_asset(db, agent.asset_id) if agent.asset_id else None
+            alert = self._create_alert(
+                db, agent.asset_id or 0, AlertLevel.warning,
+                f"AI Agent「{agent.agent_name}」长期未调用",
+                f"AI Agent「{agent.agent_name}」(framework={agent.framework}) "
+                f"已 {90}+ 天未调用，请确认是否仍需保留。",
+                job_id=job.id if job else None,
+                title_key="alert.aiAgent.dormant",
+                title_params={"agent_name": agent.agent_name},
+                message_key="alert.msg.aiAgent.dormant",
+                message_params={
+                    "agent_name": agent.agent_name,
+                    "framework": agent.framework,
+                    "last_invocation_at": str(agent.last_invocation_at),
+                },
+            )
+            created += 1
+            logger.info("Alert: dormant AI Agent %s (>90d)", agent.agent_name)
         return created
 
 

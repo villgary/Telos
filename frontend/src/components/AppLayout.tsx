@@ -27,6 +27,7 @@ import {
   ApiOutlined,
   AimOutlined,
   QuestionCircleOutlined,
+  RobotOutlined,
 } from '@ant-design/icons'
 import { Link, useNavigate, Outlet } from 'react-router-dom'
 import { useEffect, useState, useCallback } from 'react'
@@ -210,6 +211,9 @@ export function AppLayout({ viewMode, setViewMode }: AppLayoutProps) {
               <Link to="/ai">{t('nav.aiAnalysis')}</Link>
             </Menu.Item>
 
+            <Menu.Item key="nhi" icon={<ApiOutlined />}><Link to="/nhi">{t('nav.nhi')}</Link></Menu.Item>
+            <Menu.Item key="ai-agents" icon={<RobotOutlined />}><Link to="/ai-agents">{t('nav.aiAgents')}</Link></Menu.Item>
+
             <Menu.SubMenu key="asset-group" icon={<CloudServerOutlined />} title={t('nav.assetManagement')}>
               <Menu.Item key="assets" icon={<AppstoreOutlined />}><Link to="/assets">{t('nav.assetList')}</Link></Menu.Item>
               <Menu.Item key="asset-categories" icon={<FolderOutlined />}><Link to="/asset-categories">{t('nav.assetCategories')}</Link></Menu.Item>
@@ -239,7 +243,6 @@ export function AppLayout({ viewMode, setViewMode }: AppLayoutProps) {
               <Menu.Item key="ueba" icon={<LineChartOutlined />}><Link to="/ueba">{t('nav.ueba')}</Link></Menu.Item>
               <Menu.Item key="lifecycle" icon={<ClockCircleOutlined />}><Link to="/lifecycle">{t('nav.lifecycle')}</Link></Menu.Item>
               <Menu.Item key="pam" icon={<KeyOutlined />}><Link to="/pam">{t('nav.pam')}</Link></Menu.Item>
-              <Menu.Item key="nhi" icon={<ApiOutlined />}><Link to="/nhi">{t('nav.nhi')}</Link></Menu.Item>
             </Menu.SubMenu>
 
             <Menu.SubMenu key="risk-compliance" icon={<SafetyOutlined />} title={t('nav.compliancePolicy') || 'Compliance & Policy'}>
