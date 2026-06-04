@@ -85,12 +85,13 @@ def test_rotate_writes_one_audit_row_with_old_and_new_fingerprint(client):
     s = Session()
     rows = s.query(models.CloudConnectionAuditLog).order_by(
         models.CloudConnectionAuditLog.id).all()
-    actions = [r.action for r in rows]
-    assert "rotated" in actions
-    rotated = next(r for r in rows if r.action == "rotated")
-    assert "old-key" not in str(rotated.before)
-    assert "new-key" not in str(rotated.after)
-    assert "old-key" not in (rotated.note or "")
+    # create + rotate = exactly 2 rows
+    assert len(rows) == 2
+    assert rows[0].action == "created"
+    assert rows[1].action == "rotated"
+    assert "old-key" not in str(rows[1].before)
+    assert "new-key" not in str(rows[1].after)
+    assert "old-key" not in (rows[1].note or "")
 
 
 def test_delete_writes_one_audit_row(client):
@@ -101,8 +102,9 @@ def test_delete_writes_one_audit_row(client):
     assert r.status_code == 204
     s = Session()
     rows = s.query(models.CloudConnectionAuditLog).all()
-    actions = [r.action for r in rows]
-    assert "deleted" in actions
+    # create + delete = exactly 2 rows
+    assert len(rows) == 2
+    assert [r.action for r in rows] == ["created", "deleted"]
 
 
 def test_rename_writes_one_audit_row(client):
@@ -113,5 +115,6 @@ def test_rename_writes_one_audit_row(client):
     assert r.status_code == 200
     s = Session()
     rows = s.query(models.CloudConnectionAuditLog).all()
-    actions = [r.action for r in rows]
-    assert "renamed" in actions
+    # create + rename = exactly 2 rows
+    assert len(rows) == 2
+    assert [r.action for r in rows] == ["created", "renamed"]

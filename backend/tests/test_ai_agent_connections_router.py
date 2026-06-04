@@ -129,6 +129,11 @@ def test_delete_soft_deletes_and_keeps_agents(client, db):
     r = c.delete("/api/v1/ai-agents/connections/1")
     assert r.status_code == 204
 
+    # Agent must survive (FK on ai_agents.connection_id is NULLed, not cascaded)
+    surviving = db.query(AIAgent).filter(AIAgent.agent_name == "c1 / P / k").first()
+    assert surviving is not None
+    assert surviving.connection_id is None
+
 
 def test_sync_in_progress_returns_409(client, db):
     c, _, _ = client
