@@ -9,6 +9,7 @@ Telos 是智能化身份威胁检测与合规（ITDR）平台，通过自动化�
 - **账号快照与比对** — 每次扫描结果持久化为只读快照，支持新增/消失/权限爬升检测
 - **身份融合** — 跨系统同一自然人识别，构建完整身份图谱
 - **NHI（非人身份）管理** — 服务账号、服务密钥的全生命周期管理
+- **AI Agent 管理** — 发现与治理 LLM 驱动的 AI Agent（LangChain / AutoGen / CrewAI / Claude Code 等），含 API Key 指纹、工具能力识别与风险评分
 - **风险评分** — 基于登录频率、特权范围、身份融合的账号风险评分
 - **合规自动化** — SOC2 / ISO 27001 / 等保2.0 / PCI-DSS 多框架自动验证
 - **ATT&CK 覆盖率分析** — 账号安全威胁映射到 MITRE ATT&CK 框架
@@ -111,6 +112,7 @@ telos/
 │   │   ├── policies.py
 │   │   ├── lifecycle.py
 │   │   ├── nhi.py
+│   │   ├── ai_agents.py
 │   │   ├── identities.py
 │   │   ├── ueba.py
 │   │   ├── risk.py
@@ -119,6 +121,7 @@ telos/
 │   │   └── ...
 │   └── services/
 │       ├── ssh_scanner.py
+│       ├── ai_agent_scanner.py
 │       ├── diff_engine.py
 │       ├── risk_scorer.py
 │       └── ...
@@ -132,6 +135,8 @@ telos/
 │   │   │   ├── Credentials.tsx
 │   │   │   ├── SubTypes.tsx
 │   │   │   ├── IdentityThreatAnalysis.tsx
+│   │   │   ├── AIAgentsPage.tsx
+│   │   │   ├── AIAgentDetailPage.tsx
 │   │   │   ├── BehaviorAnalytics.tsx
 │   │   │   ├── Playbooks.tsx
 │   │   │   ├── KnowledgeBase.tsx
