@@ -36,7 +36,7 @@ def test_retry_with_backoff_eventually_succeeds(monkeypatch):
     result = base._retry_with_backoff(flaky, max_attempts=4)
     assert result == "ok"
     assert calls["n"] == 3
-    assert delays == [1, 2, 4]  # 1s, 2s, 4s
+    assert delays == [1.0, 2.0]  # sleep before attempts 2 and 3, not after the last failed attempt
 
 
 def test_retry_with_backoff_gives_up_after_max_attempts(monkeypatch):
