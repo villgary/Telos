@@ -182,7 +182,11 @@ def _execute_scan(job_id: int) -> None:
                         passphrase=passphrase,
                         timeout=120,
                     )
-            elif asset.os_type == "windows":
+            else:
+                # Anything that isn't linux / database / network / cloud
+                # is treated as Windows (covers windows_11, windows_10,
+                # windows_server, etc.). Matches the dispatch in
+                # routers/assets.py:799 so Test and Scan agree.
                 conn_result, accounts = win_scanner.scan_asset(
                     ip=asset.ip,
                     port=asset.port,
