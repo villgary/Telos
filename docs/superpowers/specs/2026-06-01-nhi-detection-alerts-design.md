@@ -173,12 +173,11 @@ for (nhi_type, username), asset_ids in clusters.items():
     # Respect window: only count assets seen within the policy's window
     window_cutoff = now() - timedelta(days=policy.cross_asset_window_days)
     recent_asset_ids = {
-        a for a in asset_ids
-        if any(
-            n.asset_id == a and n.last_seen_at and n.last_seen_at >= window_cutoff
-            for n in all_candidates
-            if n.nhi_type == nhi_type and n.username == username
-        )
+        n.asset_id for n in all_candidates
+        if n.nhi_type == nhi_type
+        and n.username == username
+        and n.last_seen_at is not None
+        and n.last_seen_at >= window_cutoff
     }
     if len(recent_asset_ids) < policy.cross_asset_threshold:
         continue

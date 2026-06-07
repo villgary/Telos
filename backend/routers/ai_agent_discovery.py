@@ -1,4 +1,10 @@
-"""AI Agent Cloud Connection management — CRUD + sync-now + audit log."""
+"""AI Agent Cloud Discovery — CRUD on configured provider connections +
+sync-now + per-connection audit log.
+
+The user-facing concept is *discovery*: each configured `CloudConnection`
+is a source that Telos periodically queries (or queries on demand) to
+enumerate AI agents that exist in a provider account.
+"""
 from __future__ import annotations
 
 import logging
@@ -16,7 +22,7 @@ from backend.services.cloud_discovery.sync import run_connection_sync
 
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/v1/ai-agents/connections", tags=["ai-agents"])
+router = APIRouter(prefix="/api/v1/ai-agents/discovery", tags=["ai-agents"])
 
 
 # ── Helpers ────────────────────────────────────────────────────────────

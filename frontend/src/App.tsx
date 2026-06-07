@@ -6,7 +6,7 @@ import { AppLayout } from './components/AppLayout'
 // Lazy load all page components
 const AIAgentsPage = lazy(() => import('./pages/AIAgentsPage'))
 const AIAgentDetailPage = lazy(() => import('./pages/AIAgentDetailPage'))
-const CloudConnectionsPage = lazy(() => import('./pages/CloudConnectionsPage'))
+const CloudAgentDiscoveryPage = lazy(() => import('./pages/CloudAgentDiscoveryPage'))
 const Login = lazy(() => import('./pages/Login'))
 const Dashboard = lazy(() => import('./pages/ExecutiveDashboard'))
 const Assets = lazy(() => import('./pages/Assets'))
@@ -77,7 +77,7 @@ export default function App() {
           <Route path="/identity-threat" element={<IdentityThreatAnalysis />} />
           <Route path="/nhi" element={<NHIDashboard />} />
           <Route path="/ai-agents" element={<AIAgentsPage />} />
-          <Route path="/ai-agents/connections" element={<CloudConnectionsPage />} />
+          <Route path="/ai-agents/discovery" element={<CloudAgentDiscoveryPage />} />
           <Route path="/ai-agents/:id" element={<AIAgentDetailPage />} />
           <Route path="/account-risk" element={<AccountRiskList />} />
           <Route path="/ueba" element={<BehaviorAnalytics />} />

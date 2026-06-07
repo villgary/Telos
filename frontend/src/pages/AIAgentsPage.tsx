@@ -108,9 +108,9 @@ export default function AIAgentsPage() {
         <Space>
           <Button
             icon={<ApiOutlined />}
-            onClick={() => navigate('/ai-agents/connections')}
+            onClick={() => navigate('/ai-agents/discovery')}
           >
-            {t('aiAgent.connections.title')}
+            {t('aiAgent.discovery.title')}
           </Button>
           <Button
             type="primary"

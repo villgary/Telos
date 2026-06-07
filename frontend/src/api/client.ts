@@ -717,25 +717,25 @@ export interface CloudConnectionAuditEntry {
 
 export const listCloudConnections = () =>
   api.get<{ total: number; connections: CloudConnection[] }>(
-    '/ai-agents/connections'
+    '/ai-agents/discovery'
   )
 
 export const createCloudConnection = (body: {
   name: string
   provider: 'anthropic' | 'openai'
   api_key: string
-}) => api.post<CloudConnection>('/ai-agents/connections', body)
+}) => api.post<CloudConnection>('/ai-agents/discovery', body)
 
 export const updateCloudConnection = (
   id: number,
   body: { name: string }
-) => api.patch<CloudConnection>(`/ai-agents/connections/${id}`, body)
+) => api.patch<CloudConnection>(`/ai-agents/discovery/${id}`, body)
 
 export const rotateCloudConnection = (id: number, api_key: string) =>
-  api.post<CloudConnection>(`/ai-agents/connections/${id}/rotate`, { api_key })
+  api.post<CloudConnection>(`/ai-agents/discovery/${id}/rotate`, { api_key })
 
 export const deleteCloudConnection = (id: number) =>
-  api.delete(`/ai-agents/connections/${id}`)
+  api.delete(`/ai-agents/discovery/${id}`)
 
 export const syncCloudConnection = (id: number) =>
   api.post<{
@@ -744,11 +744,11 @@ export const syncCloudConnection = (id: number) =>
     agents_discovered: number
     agents_updated: number
     error: string | null
-  }>(`/ai-agents/connections/${id}/sync`)
+  }>(`/ai-agents/discovery/${id}/sync`)
 
 export const getCloudConnectionAudit = (id: number, limit = 50, offset = 0) =>
   api.get<{ total: number; entries: CloudConnectionAuditEntry[] }>(
-    `/ai-agents/connections/${id}/audit`,
+    `/ai-agents/discovery/${id}/audit`,
     { params: { limit, offset } }
   )
 

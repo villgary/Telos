@@ -1,15 +1,17 @@
-# AI Agent Cloud Connections — Operator Guide
+# AI Agent Cloud Discovery — Operator Guide
 
 > **Audience**: Security operators and admins who manage AI Agent cloud integrations in Telos.
 > **Scope**: Anthropic Console and OpenAI Dashboard discovery.
 
-This guide covers day-to-day operation: how connections work, how to add / rotate / remove them, what the scheduler does, and how to read the audit log.
+This guide covers day-to-end operation: how the discovery sources work, how to add / rotate / remove them, what the scheduler does, and how to read the audit log.
+
+A *source* is one configured connection to a cloud provider. Each source is an independent entry; you can have multiple Anthropic sources (different orgs) or mix Anthropic and OpenAI. Removing a source does **not** delete the agents that were discovered from it.
 
 ---
 
 ## 1. Overview
 
-The Cloud Connections feature lets Telos discover AI agents in your cloud provider accounts without installing agents on every host. You give Telos an **Admin API key** for Anthropic Console or OpenAI Dashboard; Telos calls the provider's API to enumerate organisations, projects, and API keys, then ingests the discovered agents into the same `ai_agents` table that host-based scanning uses.
+The Cloud Agent Discovery feature lets Telos discover AI agents in your cloud provider accounts without installing agents on every host. You give Telos an **Admin API key** for Anthropic Console or OpenAI Dashboard; Telos calls the provider's API to enumerate organisations, projects, and API keys, then ingests the discovered agents into the same `ai_agents` table that host-based scanning uses.
 
 | Provider | API base | Key shape |
 |----------|----------|-----------|
@@ -18,21 +20,23 @@ The Cloud Connections feature lets Telos discover AI agents in your cloud provid
 
 The plaintext key is **never** stored. It is encrypted with AES-256-GCM (`ACCOUNTSCAN_MASTER_KEY`) at rest, and only a 16-character fingerprint is shown in the UI for identification.
 
+> **Note**: This feature is about *discovering* agents, not *calling* the provider. The LLM key for Telos's own AI features lives in **System Settings → AI Model** and is unrelated to the sources configured here.
+
 ---
 
-## 2. Adding a connection
+## 2. Adding a source
 
-Only an admin can add a connection.
+Only an admin can add a source.
 
-1. Navigate to **AI Agent Management → Cloud Connections**.
-2. Click **Add Connection**.
+1. Navigate to **AI Agent Management → Cloud Agent Discovery**.
+2. Click **Add Source**.
 3. Fill in:
    - **Name** — a friendly identifier (e.g. `acme-prod`). Must be unique.
    - **Provider** — `Anthropic Console` or `OpenAI Dashboard`.
    - **API Key** — paste the Admin key. The field is a password input and the value is never echoed back.
-4. Click **Add**.
+4. Click **Add Source**.
 
-The first **sync** runs only when you click **Sync Now** or when the 6h scheduler fires. Adding a connection does **not** trigger an immediate sync.
+The first **sync** runs only when you click **Sync Now** or when the 6h scheduler fires. Adding a source does **not** trigger an immediate sync.
 
 ---
 
@@ -40,7 +44,7 @@ The first **sync** runs only when you click **Sync Now** or when the 6h schedule
 
 You should rotate provider keys on the same cadence as any other privileged credential.
 
-1. In the connections table, click **Rotate Key** on the row.
+1. In the sources table, click **Rotate Key** on the row.
 2. Paste the new key.
 3. Click **Rotate** in the dialog.
 
@@ -50,15 +54,15 @@ A successful rotation writes an audit row with `action="rotated"` and before/aft
 
 ---
 
-## 4. Deleting a connection
+## 4. Deleting a source
 
 Deletion is **soft for agents**: the `CloudConnection` row is removed, but discovered agents stay in the `ai_agents` table. Their `connection_id` is NULLed out so the FK is preserved.
 
 Click **Delete** on the row and confirm. The agent list will still show those agents, but they no longer have a `connection_id` to re-sync against.
 
-> If you want to remove the discovered agents too, do it from the AI Agents list page after deleting the connection.
+> If you want to remove the discovered agents too, do it from the AI Agents list page after deleting the source.
 
-A successful delete writes an audit row with `action="deleted"` and the connection's name / provider / fingerprint in the `before` field.
+A successful delete writes an audit row with `action="deleted"` and the source's name / provider / fingerprint in the `before` field.
 
 ---
 
@@ -75,9 +79,9 @@ Click **Sync Now** on a row to trigger an immediate discovery pass. The button s
 
 ## 6. Scheduled sync (6h)
 
-The APScheduler runs `_sync_all_cloud_connections` every 6 hours, fanning out a sync to every `CloudConnection` row. One connection's failure does not block the others.
+The APScheduler runs `_sync_all_cloud_connections` every 6 hours, fanning out a sync to every source. One source's failure does not block the others.
 
-- A connection that already has `last_sync_status = "running"` is **not** double-synced (the per-connection 409 protects you here).
+- A source that already has `last_sync_status = "running"` is **not** double-synced (the per-source 409 protects you here).
 - Failed syncs retry on the next 6h tick. There is no exponential backoff for the scheduler — if the failure is persistent (e.g. an expired key), fix the key and click **Sync Now** to validate.
 - Each tick writes a `sync_started` and `sync_finished` pair to the audit log, even on failure. A missing `sync_finished` for a `sync_started` indicates a process crash mid-sync; investigate.
 
@@ -116,13 +120,13 @@ If you suspect a key leak, **rotate the key** in the provider's console immediat
 | Sync returns `rate_limited_or_transient: ...` | Provider rate limit or transient 5xx | Wait for the next 6h tick. If persistent, check the provider's status page. |
 | `409 already in progress` | A sync is currently running | Wait. If the in-flight sync never resolves, restart the backend — the next tick will pick it up. |
 | Sync reports `0 agents_discovered` after a successful run | The provider has no organisations, projects, or keys matching the Admin key's scope | Verify the key has the correct workspace / org permissions in the provider's console. |
-| `Created` audit row but no `sync_started` for it | The connection was added between scheduler ticks and no manual sync has run | Click **Sync Now**. |
+| `Created` audit row but no `sync_started` for it | The source was added between scheduler ticks and no manual sync has run | Click **Sync Now**. |
 
 ---
 
 ## 10. Security notes
 
 - The Admin key is the most privileged credential in the provider's IAM. Treat it like a database root password.
-- Only the `admin` role can see, add, edit, rotate, or delete connections. Operators with the `operator` or `viewer` role can list connections and view the audit log, but not modify them.
+- Only the `admin` role can see, add, edit, rotate, or delete sources. Operators with the `operator` or `viewer` role can list sources and view the audit log, but not modify them.
 - The encryption key (`ACCOUNTSCAN_MASTER_KEY`) is the master secret. If it leaks, **all stored cloud keys are compromised simultaneously**. Rotate it via the documented key-rotation procedure (out of scope for this guide; see the admin guide).
 - The audit log is append-only. There is no DELETE endpoint for `cloud_connection_audit_log`. If you need to prune it, do so directly in the database with a DBA's approval.

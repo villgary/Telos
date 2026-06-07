@@ -58,7 +58,7 @@ def client():
 def test_create_writes_one_audit_row(client):
     c, Session = client
     SECRET = "sk-ant-very-secret-key-1234567890"
-    r = c.post("/api/v1/ai-agents/connections",
+    r = c.post("/api/v1/ai-agents/discovery",
                json={"name": "c1", "provider": "anthropic", "api_key": SECRET})
     assert r.status_code == 201
 
@@ -76,9 +76,9 @@ def test_create_writes_one_audit_row(client):
 
 def test_rotate_writes_one_audit_row_with_old_and_new_fingerprint(client):
     c, Session = client
-    c.post("/api/v1/ai-agents/connections",
+    c.post("/api/v1/ai-agents/discovery",
            json={"name": "c1", "provider": "anthropic", "api_key": "old-key"})
-    r = c.post("/api/v1/ai-agents/connections/1/rotate",
+    r = c.post("/api/v1/ai-agents/discovery/1/rotate",
                json={"api_key": "new-key"})
     assert r.status_code == 200
 
@@ -96,9 +96,9 @@ def test_rotate_writes_one_audit_row_with_old_and_new_fingerprint(client):
 
 def test_delete_writes_one_audit_row(client):
     c, Session = client
-    c.post("/api/v1/ai-agents/connections",
+    c.post("/api/v1/ai-agents/discovery",
            json={"name": "c1", "provider": "anthropic", "api_key": "k"})
-    r = c.delete("/api/v1/ai-agents/connections/1")
+    r = c.delete("/api/v1/ai-agents/discovery/1")
     assert r.status_code == 204
     s = Session()
     rows = s.query(models.CloudConnectionAuditLog).all()
@@ -109,9 +109,9 @@ def test_delete_writes_one_audit_row(client):
 
 def test_rename_writes_one_audit_row(client):
     c, Session = client
-    c.post("/api/v1/ai-agents/connections",
+    c.post("/api/v1/ai-agents/discovery",
            json={"name": "old", "provider": "anthropic", "api_key": "k"})
-    r = c.patch("/api/v1/ai-agents/connections/1", json={"name": "new"})
+    r = c.patch("/api/v1/ai-agents/discovery/1", json={"name": "new"})
     assert r.status_code == 200
     s = Session()
     rows = s.query(models.CloudConnectionAuditLog).all()
