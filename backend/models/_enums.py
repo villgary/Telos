@@ -100,6 +100,7 @@ class AssetStatus(str, enum.Enum):
 class AuthType(str, enum.Enum):
     password = "password"
     ssh_key = "ssh_key"
+    api_token = "api_token"
 
 
 class ScanJobStatus(str, enum.Enum):
