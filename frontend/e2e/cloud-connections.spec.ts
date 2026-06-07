@@ -22,11 +22,39 @@ async function login(page: Page) {
   ).catch(() => {})
 }
 
-test.describe('Cloud Connections', () => {
-  test('user can navigate to the cloud connections page', async ({ page }) => {
-    await login(page)
-    await page.goto(BASE + '/ai-agents/connections', { waitUntil: 'networkidle' })
-    // Title is rendered in the locale chosen at login
-    await expect(page.getByText(/Cloud Connections|云连接/)).toBeVisible({ timeout: 15000 })
-  })
+test('Cloud Connections: page loads and shows the title', async ({ page }) => {
+  await login(page)
+  await page.goto(BASE + '/ai-agents/connections', { waitUntil: 'networkidle' })
+  await expect(page.getByText(/Cloud Connections|云连接/)).toBeVisible({ timeout: 15000 })
+})
+
+test('Cloud Connections: can add a connection and see it in the audit log', async ({ page }) => {
+  // Use a unique name per run so reruns don't collide
+  const connName = `e2e-test-${Date.now()}`
+
+  await login(page)
+  await page.goto(BASE + '/ai-agents/connections', { waitUntil: 'networkidle' })
+  await expect(page.getByText(/Cloud Connections|云连接/)).toBeVisible({ timeout: 15000 })
+
+  // Open the Add Connection modal
+  await page.getByRole('button', { name: /Add Connection|新增连接/ }).click()
+  await expect(page.getByText(/Add Cloud Connection|新增云连接/)).toBeVisible({ timeout: 5000 })
+
+  // Fill the form
+  await page.locator('input[id*="name" i]').first().fill(connName)
+  // Provider is an antd Select — click to open, then click the Anthropic option
+  await page.locator('.ant-select').first().click()
+  await page.getByText(/Anthropic Console/, { exact: false }).first().click()
+  // API key field is type=password
+  await page.locator('input[type="password"]').first().fill('sk-e2e-test-key-not-real')
+
+  // Submit
+  await page.getByRole('button', { name: /Add$|新增$/ }).click()
+
+  // The new connection should appear in the table
+  await expect(page.getByText(connName)).toBeVisible({ timeout: 10000 })
+
+  // Open the audit drawer and verify a "Created" entry exists
+  await page.getByRole('button', { name: /Audit Log|审计日志/ }).first().click()
+  await expect(page.getByText(/Created|已创建/)).toBeVisible({ timeout: 5000 })
 })
