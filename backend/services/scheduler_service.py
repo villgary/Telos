@@ -12,6 +12,7 @@ from apscheduler.triggers.cron import CronTrigger
 from backend.database import SessionLocal
 from backend import models
 from backend.services import alert_service
+from backend.services.cloud_discovery.sync import run_connection_sync
 from backend.services.diff_engine import compute_diff
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,12 @@ class SchedulerService:
         # Real-time threat monitor — every 5 minutes
         from backend.services.realtime_monitor import run_monitor
         self._scheduler.add_job(run_monitor, "interval", minutes=5, id="realtime_monitor")
+
+        # Cloud connection discovery — every 6 hours
+        self._scheduler.add_job(
+            _sync_all_cloud_connections, "interval", hours=6,
+            id="cloud_connection_sync", replace_existing=True,
+        )
 
         logger.info("Scheduler started")
 
@@ -215,6 +222,37 @@ def _check_review_reminders():
             logger.info(f"Scheduled reviews triggered: {result}")
     except Exception as e:
         logger.warning(f"Review reminder check failed: {e}")
+    finally:
+        db.close()
+
+
+def _sync_all_cloud_connections():
+    """Fan out a sync to every CloudConnection. One failure does not block others.
+
+    Called every 6h by the scheduler.
+    """
+    db = SessionLocal()
+    try:
+        connections = db.query(models.CloudConnection).all()
+        for conn in connections:
+            try:
+                conn.last_sync_started_at = datetime.now(timezone.utc)
+                conn.last_sync_status = "running"
+                db.commit()
+                run_connection_sync(db, conn)
+                db.commit()
+            except Exception as e:
+                logger.warning(
+                    "Scheduled cloud sync failed for connection %s: %s",
+                    conn.id, e,
+                )
+                db.rollback()
+                try:
+                    conn.last_sync_status = "failed"
+                    conn.last_sync_error = f"unexpected: {e!r}"[:256]
+                    db.commit()
+                except Exception:
+                    db.rollback()
     finally:
         db.close()
 

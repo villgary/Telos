@@ -108,3 +108,4 @@ from backend.models.nhi import (
 
 # ── AI Agent models ───────────────────────────────────────────────────
 from backend.models.ai_agents import AIAgent
+from backend.models.cloud_connection import CloudConnection, CloudConnectionAuditLog

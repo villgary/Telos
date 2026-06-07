@@ -18,7 +18,7 @@ configure_logging()
 
 from backend.database import init_db, SessionLocal
 from backend.auth import seed_default_user
-from backend.routers import auth, assets, asset_groups, asset_categories, asset_relationships, sub_types, credentials, users, scan_jobs, snapshots, schedules, alerts, ai_reports, risk, compliance, identities, lifecycle, pam_integration, review_reminders, export, ueba, policies, knowledge_base, identity_threat, playbooks, nhi, ai_agents
+from backend.routers import auth, assets, asset_groups, asset_categories, asset_relationships, sub_types, credentials, users, scan_jobs, snapshots, schedules, alerts, ai_reports, risk, compliance, identities, lifecycle, pam_integration, review_reminders, export, ueba, policies, knowledge_base, identity_threat, playbooks, nhi, ai_agents, ai_agent_connections
 from backend.services import scheduler_service
 from backend.middleware.request_context import TraceIdMiddleware
 from backend.middleware.security_headers import SecurityHeadersMiddleware
@@ -353,6 +353,7 @@ app.include_router(knowledge_base.router)
 app.include_router(identity_threat.router)
 app.include_router(playbooks.router)
 app.include_router(nhi.router)
+app.include_router(ai_agent_connections.router)
 app.include_router(ai_agents.router)
 
 

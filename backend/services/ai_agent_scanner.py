@@ -11,12 +11,16 @@ from __future__ import annotations
 import hashlib
 import re
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend import models
+from backend.models._enums import CLOUD_PROVIDER_TO_FRAMEWORK
+
+if TYPE_CHECKING:
+    from backend.services.cloud_discovery import RawAgent
 
 
 def fingerprint_api_key(key: Optional[str]) -> Optional[str]:
@@ -345,6 +349,53 @@ def score_risk(
     return score, _level_for_score(score), signals
 
 
+def score_cloud_risk(
+    agent_dict: dict,
+    connection: "models.CloudConnection",
+    all_agents: list,
+    all_agents_for_connection: list,
+) -> Tuple[int, str, list]:
+    """Score the 2 cloud-channel rules, additive to the v1 score_risk output.
+
+    `all_agents_for_connection` is the list of agents that belong to the
+    same connection (used to detect "single-agent connection").
+    `all_agents` is the global list (used to detect cross-connection reuse).
+    """
+    score = 0
+    signals = []
+
+    # Rule 9: single-agent connection with code_exec capability (+10)
+    caps = agent_dict.get("capabilities") or {}
+    if (
+        len(all_agents_for_connection) == 1
+        and caps.get("code_exec")
+    ):
+        score += 10
+        signals.append({
+            "signal": "single_agent_code_exec",
+            "weight": 10,
+            "evidence": "Connection has exactly one agent AND it has code_exec capability",
+        })
+
+    # Rule 10: cross-connection key reuse (+20)
+    fp = agent_dict.get("api_key_fingerprint")
+    if fp:
+        same_on_other_conn = any(
+            a.get("api_key_fingerprint") == fp
+            and a.get("connection_id") != connection.id
+            for a in all_agents
+        )
+        if same_on_other_conn:
+            score += 20
+            signals.append({
+                "signal": "cross_connection_key_reuse",
+                "weight": 20,
+                "evidence": "Same API key fingerprint seen on a different connection",
+            })
+
+    return score, _level_for_score(score), signals
+
+
 # ── Ingest / dedupe / upsert (Task 12) ─────────────────────────────────────
 
 
@@ -460,6 +511,102 @@ def ingest_signals(
                     results.append(existing)
             else:
                 results.append(new)
+
+    db.commit()
+    return results
+
+
+def ingest_cloud_agents(
+    db: Session,
+    connection: "models.CloudConnection",
+    raw_agents: List["RawAgent"],
+    now: Optional[datetime] = None,
+) -> List[models.AIAgent]:
+    """Ingest RawAgent rows from a single cloud connection.
+
+    Dedup: explicit SELECT WHERE (framework, agent_name) AND asset_id IS NULL.
+    Standard SQL treats NULL as distinct in unique constraints, so we cannot
+    rely on the v1 dedup index alone. (Partial unique index is a v3 fix.)
+    """
+    if not raw_agents:
+        return []
+    if now is None:
+        now = datetime.utcnow()
+
+    framework = CLOUD_PROVIDER_TO_FRAMEWORK[connection.provider]
+    all_existing = db.query(models.AIAgent).all()
+    all_agents_for_scoring = [
+        {"asset_id": a.asset_id, "connection_id": a.connection_id,
+         "api_key_fingerprint": a.api_key_fingerprint}
+        for a in all_existing
+    ]
+    conn_agents = [a for a in all_existing if a.connection_id == connection.id]
+
+    results: List[models.AIAgent] = []
+    for raw in raw_agents:
+        existing = (
+            db.query(models.AIAgent)
+            .filter(
+                models.AIAgent.framework == framework,
+                models.AIAgent.agent_name == raw.agent_name,
+                models.AIAgent.asset_id.is_(None),
+            )
+            .first()
+        )
+
+        # Score
+        agent_for_score = {
+            "asset_id": None,
+            "connection_id": connection.id,
+            "api_key_fingerprint": raw.api_key_fingerprint,
+            "capabilities": raw.capabilities,
+        }
+        # post-ingest list: includes this raw only if it's a new row
+        post_ingest_conn_agents = list(conn_agents)
+        if existing is None:
+            post_ingest_conn_agents.append(agent_for_score)
+        base_score, _base_level, base_signals = score_risk(agent_for_score, all_agents_for_scoring)
+        cloud_score, _cloud_level, cloud_signals = score_cloud_risk(
+            agent_for_score, connection, all_agents_for_scoring, post_ingest_conn_agents
+        )
+        total_score = base_score + cloud_score
+        total_level = _level_for_score(total_score)
+        all_signals = base_signals + cloud_signals
+
+        if existing:
+            existing.last_seen_at = now
+            existing.capabilities = raw.capabilities
+            existing.api_key_fingerprint = raw.api_key_fingerprint
+            existing.model = raw.model
+            existing.owner_team = raw.owner_team
+            existing.risk_score = total_score
+            existing.risk_level = total_level
+            existing.risk_signals = all_signals
+            existing.status = "active"
+            results.append(existing)
+        else:
+            new = models.AIAgent(
+                agent_name=raw.agent_name,
+                framework=framework,
+                model=raw.model,
+                owner_team=raw.owner_team,
+                owner_user=None,
+                api_key_fingerprint=raw.api_key_fingerprint,
+                api_key_location=f"cloud:{connection.provider}:{connection.id}",
+                capabilities=raw.capabilities,
+                last_invocation_at=None,
+                last_seen_at=now,
+                discovered_at=now,
+                discovery_source="api_discovery",
+                asset_id=None,
+                connection_id=connection.id,
+                risk_score=total_score,
+                risk_level=total_level,
+                risk_signals=all_signals,
+                status="active",
+            )
+            db.add(new)
+            results.append(new)
 
     db.commit()
     return results

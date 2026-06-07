@@ -685,6 +685,73 @@ export const claimAIAgent = (id: number) => api.post(`/ai-agents/${id}/claim`)
 export const triggerAIAgentScan = (asset_id?: number) =>
   api.post('/ai-agents/scan', { asset_id })
 
+// ── Cloud Connections ──────────────────────────────────────────────────────
+
+export interface CloudConnection {
+  id: number
+  name: string
+  provider: 'anthropic' | 'openai'
+  api_key_fingerprint: string
+  last_sync_at: string | null
+  last_sync_started_at: string | null
+  last_sync_status: 'success' | 'partial' | 'failed' | 'running' | null
+  last_sync_error: string | null
+  created_by_user_id: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CloudConnectionAuditEntry {
+  id: number
+  connection_id: number | null
+  actor_user_id: number | null
+  action:
+    | 'created' | 'renamed' | 'rotated' | 'deleted'
+    | 'sync_started' | 'sync_finished'
+  status: string | null
+  before: Record<string, unknown> | null
+  after: Record<string, unknown> | null
+  note: string | null
+  created_at: string
+}
+
+export const listCloudConnections = () =>
+  api.get<{ total: number; connections: CloudConnection[] }>(
+    '/ai-agents/connections'
+  )
+
+export const createCloudConnection = (body: {
+  name: string
+  provider: 'anthropic' | 'openai'
+  api_key: string
+}) => api.post<CloudConnection>('/ai-agents/connections', body)
+
+export const updateCloudConnection = (
+  id: number,
+  body: { name: string }
+) => api.patch<CloudConnection>(`/ai-agents/connections/${id}`, body)
+
+export const rotateCloudConnection = (id: number, api_key: string) =>
+  api.post<CloudConnection>(`/ai-agents/connections/${id}/rotate`, { api_key })
+
+export const deleteCloudConnection = (id: number) =>
+  api.delete(`/ai-agents/connections/${id}`)
+
+export const syncCloudConnection = (id: number) =>
+  api.post<{
+    connection_id: number
+    status: 'success' | 'partial' | 'failed'
+    agents_discovered: number
+    agents_updated: number
+    error: string | null
+  }>(`/ai-agents/connections/${id}/sync`)
+
+export const getCloudConnectionAudit = (id: number, limit = 50, offset = 0) =>
+  api.get<{ total: number; entries: CloudConnectionAuditEntry[] }>(
+    `/ai-agents/connections/${id}/audit`,
+    { params: { limit, offset } }
+  )
+
 // ── Alert Actions ─────────────────────────────────────────────────────────────
 
 export const acknowledgeAlert = (id: number) =>

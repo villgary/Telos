@@ -196,3 +196,32 @@ class AIAgentDiscoverySource(str, enum.Enum):
     SSH_SCAN = "ssh_scan"
     API_DISCOVERY = "api_discovery"
     MANUAL = "manual"
+
+
+class CloudProvider(str, enum.Enum):
+    anthropic = "anthropic"
+    openai = "openai"
+
+
+class CloudSyncStatus(str, enum.Enum):
+    SUCCESS = "success"
+    PARTIAL = "partial"
+    FAILED = "failed"
+    RUNNING = "running"
+
+
+class CloudConnectionAuditAction(str, enum.Enum):
+    CREATED = "created"
+    RENAMED = "renamed"
+    ROTATED = "rotated"
+    DELETED = "deleted"
+    SYNC_STARTED = "sync_started"
+    SYNC_FINISHED = "sync_finished"
+
+
+# Mapping used by ai_agent_scanner.ingest_cloud_agents to set AIAgent.framework.
+# (Cloud-discovered agents get a per-provider framework value.)
+CLOUD_PROVIDER_TO_FRAMEWORK = {
+    "anthropic": "cloud_anthropic",
+    "openai": "cloud_openai",
+}

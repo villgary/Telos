@@ -16,6 +16,7 @@ class AIAgent(Base):
             "framework", "agent_name", "owner_team", "asset_id",
             unique=True,
         ),
+        Index("ix_ai_agents_connection", "connection_id"),
     )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
@@ -38,8 +39,15 @@ class AIAgent(Base):
     risk_signals = Column(JSON, default=list)
     status = Column(String(16), nullable=False, default="active")
     notes = Column(Text, nullable=True)
+    connection_id = Column(
+        Integer,
+        ForeignKey("cloud_connections.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     asset = relationship("Asset")
     nhi = relationship("NHIIdentity")
+    connection = relationship("CloudConnection", back_populates="agents")

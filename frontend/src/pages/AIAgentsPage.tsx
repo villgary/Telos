@@ -105,14 +105,22 @@ export default function AIAgentsPage() {
           </Title>
           <Text type="secondary">{t('aiAgent.subtitle')}</Text>
         </div>
-        <Button
-          type="primary"
-          icon={<ScanOutlined />}
-          loading={scanning}
-          onClick={onScan}
-        >
-          {t('aiAgent.scan')}
-        </Button>
+        <Space>
+          <Button
+            icon={<ApiOutlined />}
+            onClick={() => navigate('/ai-agents/connections')}
+          >
+            {t('aiAgent.connections.title')}
+          </Button>
+          <Button
+            type="primary"
+            icon={<ScanOutlined />}
+            loading={scanning}
+            onClick={onScan}
+          >
+            {t('aiAgent.scan')}
+          </Button>
+        </Space>
       </div>
 
       {/* Stat cards */}
