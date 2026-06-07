@@ -10,7 +10,7 @@ Telos 是智能化身份威胁检测与合规（ITDR）平台，通过自动化�
 - **身份融合** — 跨系统同一自然人识别，构建完整身份图谱
 - **NHI（非人身份）管理** — 服务账号、服务密钥的全生命周期管理
 - **AI Agent 管理** — 发现与治理 LLM 驱动的 AI Agent（LangChain / AutoGen / CrewAI / Claude Code 等），含 API Key 指纹、工具能力识别与风险评分
-- **AI Agent 云连接** — 通过 Anthropic Console / OpenAI Dashboard Admin Key 自动发现云端 AI Agent（组织、项目、API Key），支持 6h 定时 + 手动同步
+- **AI Agent 云连接** — 通过 Anthropic Console / OpenAI Dashboard Admin Key 自动发现云端 AI Agent（组织、项目、API Key），支持 6h 定时 + 手动同步。操作详见 [docs/cloud-connections.md](docs/cloud-connections.md)
 - **风险评分** — 基于登录频率、特权范围、身份融合的账号风险评分
 - **合规自动化** — SOC2 / ISO 27001 / 等保2.0 / PCI-DSS 多框架自动验证
 - **ATT&CK 覆盖率分析** — 账号安全威胁映射到 MITRE ATT&CK 框架
