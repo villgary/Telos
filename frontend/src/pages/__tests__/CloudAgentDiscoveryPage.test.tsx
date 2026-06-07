@@ -1,7 +1,7 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
-import CloudConnectionsPage from '../CloudConnectionsPage'
+import CloudAgentDiscoveryPage from '../CloudAgentDiscoveryPage'
 import '../../i18n'
 
 const mocks = vi.hoisted(() => ({
@@ -24,12 +24,12 @@ vi.mock('../../api/client', () => ({
   getCloudConnectionAudit: mocks.getCloudConnectionAudit,
 }))
 
-describe('CloudConnectionsPage', () => {
+describe('CloudAgentDiscoveryPage', () => {
   it('renders an empty state when no connections', async () => {
     mocks.listCloudConnections.mockResolvedValue({ data: { total: 0, connections: [] } })
-    render(<MemoryRouter><CloudConnectionsPage /></MemoryRouter>)
+    render(<MemoryRouter><CloudAgentDiscoveryPage /></MemoryRouter>)
     await waitFor(() => {
-      expect(screen.getByText(/Cloud Connections/i)).toBeInTheDocument()
+      expect(screen.getByText(/Cloud Agent Discovery/i)).toBeInTheDocument()
     })
   })
 
@@ -47,7 +47,7 @@ describe('CloudConnectionsPage', () => {
         ],
       },
     })
-    render(<MemoryRouter><CloudConnectionsPage /></MemoryRouter>)
+    render(<MemoryRouter><CloudAgentDiscoveryPage /></MemoryRouter>)
     await waitFor(() => {
       expect(screen.getByText('acme-prod')).toBeInTheDocument()
     })
@@ -56,11 +56,11 @@ describe('CloudConnectionsPage', () => {
 
   it('opens the add dialog and shows required fields', async () => {
     mocks.listCloudConnections.mockResolvedValue({ data: { total: 0, connections: [] } })
-    render(<MemoryRouter><CloudConnectionsPage /></MemoryRouter>)
-    await waitFor(() => screen.getByText(/Add Connection/i))
-    fireEvent.click(screen.getByText(/Add Connection/i))
+    render(<MemoryRouter><CloudAgentDiscoveryPage /></MemoryRouter>)
+    await waitFor(() => screen.getByText(/Add Source/i))
+    fireEvent.click(screen.getByText(/Add Source/i))
     await waitFor(() => {
-      expect(screen.getByText(/Add Cloud Connection/i)).toBeInTheDocument()
+      expect(screen.getByText(/Add Cloud Agent Source/i)).toBeInTheDocument()
     })
   })
 })

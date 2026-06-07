@@ -70,7 +70,7 @@ def client(db):
 def test_create_connection_encrypts_key(client):
     c, admin, _ = client
     body = {"name": "acme-prod", "provider": "anthropic", "api_key": "sk-ant-secret-key"}
-    r = c.post("/api/v1/ai-agents/connections", json=body)
+    r = c.post("/api/v1/ai-agents/discovery", json=body)
     assert r.status_code == 201, r.text
     data = r.json()
     assert data["name"] == "acme-prod"
@@ -82,9 +82,9 @@ def test_create_connection_encrypts_key(client):
 
 def test_key_never_returned_in_list(client):
     c, _, _ = client
-    c.post("/api/v1/ai-agents/connections",
+    c.post("/api/v1/ai-agents/discovery",
            json={"name": "c1", "provider": "openai", "api_key": "sk-openai-test"})
-    r = c.get("/api/v1/ai-agents/connections")
+    r = c.get("/api/v1/ai-agents/discovery")
     assert r.status_code == 200
     assert "sk-openai-test" not in r.text
     assert "encrypted_api_key" not in r.json()["connections"][0]
@@ -92,9 +92,9 @@ def test_key_never_returned_in_list(client):
 
 def test_patch_rejects_api_key_field(client):
     c, _, _ = client
-    c.post("/api/v1/ai-agents/connections",
+    c.post("/api/v1/ai-agents/discovery",
            json={"name": "c1", "provider": "anthropic", "api_key": "sk-test"})
-    r = c.patch("/api/v1/ai-agents/connections/1",
+    r = c.patch("/api/v1/ai-agents/discovery/1",
                 json={"name": "renamed", "api_key": "should-be-rejected"})
     # Plan-bug fix: Pydantic v2 with `extra="forbid"` returns 422, not 400.
     assert r.status_code == 422
@@ -103,9 +103,9 @@ def test_patch_rejects_api_key_field(client):
 
 def test_rotate_writes_new_fingerprint(client):
     c, _, _ = client
-    c.post("/api/v1/ai-agents/connections",
+    c.post("/api/v1/ai-agents/discovery",
            json={"name": "c1", "provider": "anthropic", "api_key": "old-key"})
-    r = c.post("/api/v1/ai-agents/connections/1/rotate",
+    r = c.post("/api/v1/ai-agents/discovery/1/rotate",
                json={"api_key": "new-key"})
     assert r.status_code == 200
     assert r.json()["api_key_fingerprint"] == crypto.fingerprint("new-key")
@@ -113,7 +113,7 @@ def test_rotate_writes_new_fingerprint(client):
 
 def test_delete_soft_deletes_and_keeps_agents(client, db):
     c, _, _ = client
-    c.post("/api/v1/ai-agents/connections",
+    c.post("/api/v1/ai-agents/discovery",
            json={"name": "c1", "provider": "anthropic", "api_key": "sk-test"})
     # Manually create a cloud agent pointing at this connection
     from backend.models import AIAgent, CloudConnection
@@ -126,7 +126,7 @@ def test_delete_soft_deletes_and_keeps_agents(client, db):
     )
     db.add(agent); db.commit()
 
-    r = c.delete("/api/v1/ai-agents/connections/1")
+    r = c.delete("/api/v1/ai-agents/discovery/1")
     assert r.status_code == 204
 
     # Agent must survive (FK on ai_agents.connection_id is NULLed, not cascaded)
@@ -137,20 +137,20 @@ def test_delete_soft_deletes_and_keeps_agents(client, db):
 
 def test_sync_in_progress_returns_409(client, db):
     c, _, _ = client
-    c.post("/api/v1/ai-agents/connections",
+    c.post("/api/v1/ai-agents/discovery",
            json={"name": "c1", "provider": "anthropic", "api_key": "sk-test"})
     # Mark connection as currently running
     db.query(models.CloudConnection).filter(
         models.CloudConnection.id == 1
     ).update({models.CloudConnection.last_sync_status: "running"})
     db.commit()
-    r = c.post("/api/v1/ai-agents/connections/1/sync")
+    r = c.post("/api/v1/ai-agents/discovery/1/sync")
     assert r.status_code == 409
 
 
 def test_sync_success_path_writes_agents_and_audit(client):
     c, _, _ = client
-    c.post("/api/v1/ai-agents/connections",
+    c.post("/api/v1/ai-agents/discovery",
            json={"name": "c1", "provider": "anthropic", "api_key": "sk-test"})
 
     from backend.services.cloud_discovery import RawAgent
@@ -174,7 +174,7 @@ def test_sync_success_path_writes_agents_and_audit(client):
     _original_discover = _run_sync_func.__globals__["cloud_discover"]
     _run_sync_func.__globals__["cloud_discover"] = lambda conn: fake_raws
     try:
-        r = c.post("/api/v1/ai-agents/connections/1/sync")
+        r = c.post("/api/v1/ai-agents/discovery/1/sync")
     finally:
         _run_sync_func.__globals__["cloud_discover"] = _original_discover
 
@@ -186,7 +186,7 @@ def test_sync_success_path_writes_agents_and_audit(client):
     assert body["error"] is None
 
     # Audit list shows created + sync_started + sync_finished
-    r2 = c.get("/api/v1/ai-agents/connections/1/audit")
+    r2 = c.get("/api/v1/ai-agents/discovery/1/audit")
     assert r2.status_code == 200
     actions = [e["action"] for e in r2.json()["entries"]]
     assert "created" in actions

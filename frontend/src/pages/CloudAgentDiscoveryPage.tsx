@@ -1,5 +1,5 @@
 /**
- * Cloud Connections management page — peer to /ai-agents.
+ * Cloud Agent Discovery page — peer to /ai-agents.
  * Lists connections, supports add / edit (name only) / delete / rotate / sync-now.
  * Shows the per-connection audit log in a drawer.
  */
@@ -22,7 +22,7 @@ import {
 
 const { Title, Text } = Typography
 
-export default function CloudConnectionsPage() {
+export default function CloudAgentDiscoveryPage() {
   const { t } = useTranslation()
   const [loading, setLoading] = useState(true)
   const [connections, setConnections] = useState<CloudConnection[]>([])
@@ -54,12 +54,12 @@ export default function CloudConnectionsPage() {
     const values = await addForm.validateFields()
     try {
       await createCloudConnection(values)
-      message.success(t('aiAgent.connections.addSuccess'))
+      message.success(t('aiAgent.discovery.addSuccess'))
       setAddOpen(false)
       addForm.resetFields()
       refresh()
     } catch (e: any) {
-      message.error(e?.response?.data?.detail || t('aiAgent.connections.addError'))
+      message.error(e?.response?.data?.detail || t('aiAgent.discovery.addError'))
     }
   }
 
@@ -105,12 +105,12 @@ export default function CloudConnectionsPage() {
     try {
       const r = await syncCloudConnection(c.id)
       message.success(
-        t('aiAgent.connections.agentsDiscovered', { count: r.data.agents_discovered })
+        t('aiAgent.discovery.agentsDiscovered', { count: r.data.agents_discovered })
       )
       refresh()
     } catch (e: any) {
       if (e?.response?.status === 409) {
-        message.warning(t('aiAgent.connections.syncInProgress'))
+        message.warning(t('aiAgent.discovery.syncInProgress'))
       } else {
         message.error('Sync failed')
       }
@@ -131,15 +131,15 @@ export default function CloudConnectionsPage() {
 
   const columns = [
     {
-      title: t('aiAgent.connections.name'),
+      title: t('aiAgent.discovery.name'),
       dataIndex: 'name',
       key: 'name',
     },
     {
-      title: t('aiAgent.connections.provider'),
+      title: t('aiAgent.discovery.provider'),
       dataIndex: 'provider',
       key: 'provider',
-      render: (p: string) => t(`aiAgent.connections.providerLabel.${p}`),
+      render: (p: string) => t(`aiAgent.discovery.providerLabel.${p}`),
     },
     {
       title: 'Fingerprint',
@@ -148,10 +148,10 @@ export default function CloudConnectionsPage() {
       render: (fp: string) => <Text code>{fp}</Text>,
     },
     {
-      title: t('aiAgent.connections.lastSync'),
+      title: t('aiAgent.discovery.lastSync'),
       key: 'last_sync',
       render: (_: any, c: CloudConnection) => {
-        if (!c.last_sync_at) return <Text type="secondary">{t('aiAgent.connections.lastSyncNever')}</Text>
+        if (!c.last_sync_at) return <Text type="secondary">{t('aiAgent.discovery.lastSyncNever')}</Text>
         return (
           <Space direction="vertical" size={0}>
             <Text>{new Date(c.last_sync_at).toLocaleString()}</Text>
@@ -161,7 +161,7 @@ export default function CloudConnectionsPage() {
                 c.last_sync_status === 'partial' ? 'orange' :
                 c.last_sync_status === 'running' ? 'blue' : 'red'
               }>
-                {t(`aiAgent.connections.status.${c.last_sync_status}`)}
+                {t(`aiAgent.discovery.status.${c.last_sync_status}`)}
               </Tag>
             )}
             {c.last_sync_error && (
@@ -187,28 +187,28 @@ export default function CloudConnectionsPage() {
             onClick={() => handleSync(c)}
           >
             {syncingId === c.id
-              ? t('aiAgent.connections.syncing')
-              : t('aiAgent.connections.syncNow')}
+              ? t('aiAgent.discovery.syncing')
+              : t('aiAgent.discovery.syncNow')}
           </Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => {
             setEditing(c); editForm.setFieldsValue({ name: c.name })
           }}>
-            {t('aiAgent.connections.edit')}
+            {t('aiAgent.discovery.edit')}
           </Button>
           <Button size="small" icon={<KeyOutlined />} onClick={() => setRotating(c)}>
-            {t('aiAgent.connections.rotate')}
+            {t('aiAgent.discovery.rotate')}
           </Button>
           <Button size="small" icon={<HistoryOutlined />} onClick={() => openAudit(c)}>
-            {t('aiAgent.connections.auditLog')}
+            {t('aiAgent.discovery.auditLog')}
           </Button>
           <Popconfirm
-            title={t('aiAgent.connections.deleteConfirm')}
+            title={t('aiAgent.discovery.deleteConfirm')}
             onConfirm={() => handleDelete(c.id)}
             okText="Delete"
             okButtonProps={{ danger: true }}
           >
             <Button size="small" danger icon={<DeleteOutlined />}>
-              {t('aiAgent.connections.delete')}
+              {t('aiAgent.discovery.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -220,11 +220,11 @@ export default function CloudConnectionsPage() {
     <div style={{ padding: 24 }}>
       <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
         <div>
-          <Title level={3} style={{ margin: 0 }}>{t('aiAgent.connections.title')}</Title>
+          <Title level={3} style={{ margin: 0 }}>{t('aiAgent.discovery.title')}</Title>
           <Text type="secondary">{t('aiAgent.subtitle')}</Text>
         </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>
-          {t('aiAgent.connections.add')}
+          {t('aiAgent.discovery.add')}
         </Button>
       </Space>
 
@@ -238,32 +238,32 @@ export default function CloudConnectionsPage() {
 
       {/* Add dialog */}
       <Modal
-        title={t('aiAgent.connections.addTitle')}
+        title={t('aiAgent.discovery.addTitle')}
         open={addOpen}
         onCancel={() => setAddOpen(false)}
         onOk={handleAdd}
-        okText={t('aiAgent.connections.add')}
+        okText={t('aiAgent.discovery.add')}
         destroyOnClose
       >
         <Form form={addForm} layout="vertical" preserve={false}>
-          <Form.Item name="name" label={t('aiAgent.connections.name')}
+          <Form.Item name="name" label={t('aiAgent.discovery.name')}
                      rules={[{ required: true, max: 64 }]}>
             <Input placeholder="acme-prod" />
           </Form.Item>
-          <Form.Item name="provider" label={t('aiAgent.connections.provider')}
+          <Form.Item name="provider" label={t('aiAgent.discovery.provider')}
                      rules={[{ required: true }]}>
             <Select>
               <Select.Option value="anthropic">
-                {t('aiAgent.connections.providerLabel.anthropic')}
+                {t('aiAgent.discovery.providerLabel.anthropic')}
               </Select.Option>
               <Select.Option value="openai">
-                {t('aiAgent.connections.providerLabel.openai')}
+                {t('aiAgent.discovery.providerLabel.openai')}
               </Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item name="api_key" label={t('aiAgent.connections.apiKey')}
+          <Form.Item name="api_key" label={t('aiAgent.discovery.apiKey')}
                      rules={[{ required: true }]}
-                     extra={t('aiAgent.connections.apiKeyHint')}>
+                     extra={t('aiAgent.discovery.apiKeyHint')}>
             <Input.Password placeholder="sk-ant-admin-..." />
           </Form.Item>
         </Form>
@@ -271,14 +271,14 @@ export default function CloudConnectionsPage() {
 
       {/* Edit name dialog */}
       <Modal
-        title={t('aiAgent.connections.edit')}
+        title={t('aiAgent.discovery.edit')}
         open={!!editing}
         onCancel={() => setEditing(null)}
         onOk={handleRename}
         destroyOnClose
       >
         <Form form={editForm} layout="vertical" preserve={false}>
-          <Form.Item name="name" label={t('aiAgent.connections.name')}
+          <Form.Item name="name" label={t('aiAgent.discovery.name')}
                      rules={[{ required: true, max: 64 }]}>
             <Input />
           </Form.Item>
@@ -287,14 +287,14 @@ export default function CloudConnectionsPage() {
 
       {/* Rotate key dialog */}
       <Modal
-        title={t('aiAgent.connections.rotate')}
+        title={t('aiAgent.discovery.rotate')}
         open={!!rotating}
         onCancel={() => { setRotating(null); rotateForm.resetFields() }}
         onOk={handleRotate}
         destroyOnClose
       >
         <Form form={rotateForm} layout="vertical" preserve={false}>
-          <Form.Item name="api_key" label={t('aiAgent.connections.apiKey')}
+          <Form.Item name="api_key" label={t('aiAgent.discovery.apiKey')}
                      rules={[{ required: true }]}>
             <Input.Password />
           </Form.Item>
@@ -303,7 +303,7 @@ export default function CloudConnectionsPage() {
 
       {/* Audit drawer */}
       <Drawer
-        title={auditConn ? `${t('aiAgent.connections.auditLog')} — ${auditConn.name}` : ''}
+        title={auditConn ? `${t('aiAgent.discovery.auditLog')} — ${auditConn.name}` : ''}
         open={!!auditConn}
         onClose={() => setAuditConn(null)}
         width={600}
@@ -325,7 +325,7 @@ export default function CloudConnectionsPage() {
               {
                 title: 'Action',
                 dataIndex: 'action',
-                render: (a: string) => t(`aiAgent.connections.auditAction.${a}`),
+                render: (a: string) => t(`aiAgent.discovery.auditAction.${a}`),
               },
               {
                 title: 'Note',
