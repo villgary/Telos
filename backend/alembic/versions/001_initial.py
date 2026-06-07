@@ -14,40 +14,28 @@ branch_labels = None
 depends_on = None
 
 
-def _enum_columns(enum_name: str, *values: str):
-    """Build the (name, Enum(sqlite_format, pg_format)) column definition list."""
-    return [(v,) for v in values]
-
-
 # ─── Upgrade ───────────────────────────────────────────────────────────────────
 
 def upgrade() -> None:
-    dialect = op.get_context().dialect.name
-
     # ── Pre-create enum types (PostgreSQL only; SQLite ignores create_type=False)
     for enum_name, values in [
-        ("userrole",        "admin", "operator", "viewer"),
-        ("authtype",        "password", "ssh_key"),
-        ("assetcategory",   "server", "database", "network"),
-        ("ostype",          "linux", "windows"),
-        ("dbtype",          "mysql", "postgresql", "redis", "mongodb", "mssql"),
-        ("networkvendor",   "cisco", "h3c", "huawei", "generic"),
-        ("assetstatus",     "untested", "online", "offline", "auth_failed"),
-        ("scanjobstatus",   "pending", "running", "success", "partial_success", "failed", "cancelled"),
-        ("triggertype",     "manual", "scheduled"),
-        ("difftype",        "added", "removed", "escalated", "deactivated", "modified"),
-        ("risklevel",       "critical", "warning", "info"),
-        ("diffstatus",      "pending", "confirmed_safe", "confirmed_threat"),
-        ("alertchannel",    "email", "in_app"),
-        ("alertlevel",      "critical", "warning", "info"),
+        ("userrole",        ("admin", "operator", "viewer")),
+        ("authtype",        ("password", "ssh_key")),
+        ("assetcategory",   ("server", "database", "network")),
+        ("ostype",          ("linux", "windows")),
+        ("dbtype",          ("mysql", "postgresql", "redis", "mongodb", "mssql")),
+        ("networkvendor",   ("cisco", "h3c", "huawei", "generic")),
+        ("assetstatus",     ("untested", "online", "offline", "auth_failed")),
+        ("scanjobstatus",   ("pending", "running", "success", "partial_success", "failed", "cancelled")),
+        ("triggertype",     ("manual", "scheduled")),
+        ("difftype",        ("added", "removed", "escalated", "deactivated", "modified")),
+        ("risklevel",       ("critical", "warning", "info")),
+        ("diffstatus",      ("pending", "confirmed_safe", "confirmed_threat")),
+        ("alertchannel",    ("email", "in_app")),
+        ("alertlevel",      ("critical", "warning", "info")),
     ]:
         enum_type = sa.Enum(*values, name=enum_name, create_type=True)
         enum_type.create(op.get_bind(), checkfirst=False)
-
-    # Helper to get the right SQLAlchemy type
-    def enum_col(name: str, values: tuple):
-        pg_type = sa.Enum(*values, name=name, create_type=False)
-        return sa.Column(pg_type)
 
     # ── users ──────────────────────────────────────────────────────────────────
     op.create_table(
@@ -149,8 +137,12 @@ def upgrade() -> None:
     op.create_index("ix_assets_ip", "assets", ["ip"])
 
     # ── Add scan_jobs.asset_id FK now that assets exists ────────────────────────
-    op.create_foreign_key("fk_scan_jobs_asset", "scan_jobs", "assets", ["asset_id"], ["id"])
-    op.create_foreign_key("fk_assets_last_scan_job", "assets", "scan_jobs", ["last_scan_job_id"], ["id"])
+    # ALTER of constraints isn't supported on SQLite — batch mode does the
+    # table-copy-and-move dance.
+    with op.batch_alter_table("scan_jobs") as batch:
+        batch.create_foreign_key("fk_scan_jobs_asset", "assets", ["asset_id"], ["id"])
+    with op.batch_alter_table("assets") as batch:
+        batch.create_foreign_key("fk_assets_last_scan_job", "scan_jobs", ["last_scan_job_id"], ["id"])
 
     # ── account_snapshots ──────────────────────────────────────────────────────
     op.create_table(

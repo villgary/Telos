@@ -43,7 +43,7 @@ def upgrade():
         sa.Column("match_confidence", sa.Integer(), server_default="0", nullable=False),
         sa.Column("synced_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKey(["integration_id"], ["pam_integrations.id"], name="fk_pam_integration"),
+        sa.ForeignKeyConstraint(["integration_id"], ["pam_integrations.id"], name="fk_pam_integration"),
     )
 
 

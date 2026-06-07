@@ -16,15 +16,25 @@ depends_on = None
 
 
 def upgrade():
-    # Add parent_id column (nullable FK to self)
-    op.add_column(
-        "asset_category_defs",
-        sa.Column("parent_id", sa.Integer(), sa.ForeignKey("asset_category_defs.id"), nullable=True),
-    )
+    # Add parent_id column (nullable FK to self). SQLite can't ALTER TABLE
+    # to add a column with a foreign-key definition — use batch mode.
+    # Name the FK explicitly: batch mode on SQLite chokes on unnamed
+    # constraints during the table-copy-and-move dance.
+    with op.batch_alter_table("asset_category_defs") as batch:
+        batch.add_column(
+            sa.Column("parent_id", sa.Integer(), nullable=True),
+        )
+        batch.create_foreign_key(
+            "fk_asset_category_defs_parent",
+            "asset_category_defs",
+            ["parent_id"], ["id"],
+        )
     # sub_type_kind was stored as string in SQLite even as Enum column;
-    # no type change needed — just ensure it stays string
-    op.alter_column("asset_category_defs", "sub_type_kind", existing_type=sa.String(64), nullable=False)
+    # no type change needed — leave it alone (no alter_column call).
 
 
 def downgrade():
-    op.drop_column("asset_category_defs", "parent_id")
+    # SQLite can't drop a column with a foreign-key definition via plain
+    # ALTER TABLE — use batch mode.
+    with op.batch_alter_table("asset_category_defs") as batch:
+        batch.drop_column("parent_id")

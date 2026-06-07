@@ -38,7 +38,7 @@ def upgrade():
         sa.Column("alert_sent", sa.Boolean(), server_default="0", nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKey(["snapshot_id"], ["account_snapshots.id"], name="fk_lifecycle_snapshot"),
+        sa.ForeignKeyConstraint(["snapshot_id"], ["account_snapshots.id"], name="fk_lifecycle_snapshot"),
         sa.UniqueConstraint("snapshot_id", name="uq_lifecycle_snapshot"),
     )
 

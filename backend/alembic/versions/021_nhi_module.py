@@ -44,7 +44,8 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now(), onupdate=sa.func.now()),
     )
-    op.create_index("ix_nhi_identities_username", "nhi_identities", ["username"])
+    # The `username` column above already has index=True, which
+    # auto-creates ix_nhi_identities_username. Don't recreate it.
 
     # NHI Alerts
     op.create_table(

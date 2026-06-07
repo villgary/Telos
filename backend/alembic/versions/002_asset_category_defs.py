@@ -15,10 +15,13 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # subtypekind enum
-    op.execute("""
-        CREATE TYPE subtypekind AS ENUM ('none', 'os', 'database', 'network')
-    """)
+    # subtypekind enum — Postgres needs CREATE TYPE first; SQLite stores
+    # enums as VARCHAR with a CHECK constraint, so the column definition
+    # below is sufficient.
+    if op.get_context().dialect.name == "postgresql":
+        op.execute("""
+            CREATE TYPE subtypekind AS ENUM ('none', 'os', 'database', 'network')
+        """)
 
     # New table (must exist before adding FK in assets)
     op.create_table(
@@ -38,26 +41,32 @@ def upgrade() -> None:
 
     # Add FK column to assets (nullable, can be backfilled later)
     op.add_column("assets", sa.Column("asset_category_def_id", sa.Integer(), nullable=True))
-    op.create_foreign_key(
-        "fk_assets_category_def",
-        "assets", "asset_category_defs",
-        ["asset_category_def_id"], ["id"],
-    )
+    # ALTER of constraints isn't supported on SQLite — batch mode.
+    with op.batch_alter_table("assets") as batch:
+        batch.create_foreign_key(
+            "fk_assets_category_def",
+            "asset_category_defs",
+            ["asset_category_def_id"], ["id"],
+        )
 
-    # Seed default categories (raw SQL — dialect agnostic)
+    # Seed default categories. NOW() is MySQL/Postgres, CURRENT_TIMESTAMP
+    # is the SQL standard / SQLite-friendly equivalent.
     op.execute("""
         INSERT INTO asset_category_defs (slug, name, description, icon, sub_type_kind, created_at)
         VALUES
-            ('server',   '服务器', 'Linux / Windows 主机',   'CloudServerOutlined', 'os',       NOW()),
-            ('database', '数据库', 'MySQL / PostgreSQL / Redis 等', 'DatabaseOutlined', 'database', NOW()),
-            ('network',  '网络设备', '交换机 / 路由器',         'GlobalOutlined',      'network',  NOW())
+            ('server',   '服务器', 'Linux / Windows 主机',   'CloudServerOutlined', 'os',       CURRENT_TIMESTAMP),
+            ('database', '数据库', 'MySQL / PostgreSQL / Redis 等', 'DatabaseOutlined', 'database', CURRENT_TIMESTAMP),
+            ('network',  '网络设备', '交换机 / 路由器',         'GlobalOutlined',      'network',  CURRENT_TIMESTAMP)
     """)
 
 
 def downgrade() -> None:
-    op.drop_constraint("fk_assets_category_def", "assets", type_="foreignkey")
-    op.drop_column("assets", "asset_category_def_id")
+    # Batch mode for the constraint drop + column drop on SQLite.
+    with op.batch_alter_table("assets") as batch:
+        batch.drop_constraint("fk_assets_category_def", type_="foreignkey")
+        batch.drop_column("asset_category_def_id")
     op.drop_index("ix_asset_category_defs_slug", table_name="asset_category_defs")
     op.drop_index("ix_asset_category_defs_id", table_name="asset_category_defs")
     op.drop_table("asset_category_defs")
-    op.execute("DROP TYPE IF EXISTS subtypekind")
+    if op.get_context().dialect.name == "postgresql":
+        op.execute("DROP TYPE IF EXISTS subtypekind")

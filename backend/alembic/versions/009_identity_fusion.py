@@ -39,9 +39,9 @@ def upgrade():
         sa.Column("match_confidence", sa.Integer(), server_default="0", nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKey(["identity_id"], ["human_identities.id"], name="fk_identity_account_identity"),
-        sa.ForeignKey(["snapshot_id"], ["account_snapshots.id"], name="fk_identity_account_snapshot"),
-        sa.ForeignKey(["asset_id"], ["assets.id"], name="fk_identity_account_asset"),
+        sa.ForeignKeyConstraint(["identity_id"], ["human_identities.id"], name="fk_identity_account_identity"),
+        sa.ForeignKeyConstraint(["snapshot_id"], ["account_snapshots.id"], name="fk_identity_account_snapshot"),
+        sa.ForeignKeyConstraint(["asset_id"], ["assets.id"], name="fk_identity_account_asset"),
         sa.UniqueConstraint("identity_id", "snapshot_id", name="uq_identity_snapshot"),
     )
 
