@@ -13,6 +13,7 @@ class CredentialBase(BaseModel):
     password: Optional[str] = None
     private_key: Optional[str] = None
     passphrase: Optional[str] = None
+    api_token: Optional[str] = None
 
 
 class CredentialCreate(CredentialBase):
@@ -25,6 +26,7 @@ class CredentialUpdate(BaseModel):
     password: Optional[str] = None
     private_key: Optional[str] = None
     passphrase: Optional[str] = None
+    api_token: Optional[str] = None
 
 
 class CredentialResponse(BaseModel):
@@ -34,6 +36,7 @@ class CredentialResponse(BaseModel):
     username: str
     has_password: bool
     has_private_key: bool
+    has_api_token: bool
     created_by: Optional[int]
     created_at: datetime
 
@@ -48,6 +51,7 @@ class CredentialResponse(BaseModel):
             username=cred.username,
             has_password=cred.password_enc is not None,
             has_private_key=cred.private_key_enc is not None,
+            has_api_token=cred.api_token_enc is not None,
             created_by=cred.created_by,
             created_at=cred.created_at,
         )

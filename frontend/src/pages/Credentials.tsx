@@ -17,6 +17,7 @@ interface Credential {
   username: string
   has_password: boolean
   has_private_key: boolean
+  has_api_token: boolean
   created_at: string
 }
 
@@ -66,6 +67,7 @@ export default function Credentials() {
         if (values.password) payload.password = values.password
         if (values.private_key) payload.private_key = values.private_key
         if (values.passphrase !== undefined) payload.passphrase = values.passphrase ?? ''
+        if (values.api_token) payload.api_token = values.api_token
         await api.put(`/credentials/${editCred.id}`, payload)
         message.success(t('credential.updated'))
       } else {
@@ -102,8 +104,10 @@ export default function Credentials() {
       key: 'auth_type',
       width: 130,
       render: (v: string) => (
-        <Tag color={v === 'password' ? 'blue' : 'purple'}>
-          {v === 'password' ? t('credential.userPass') : t('credential.sshKey')}
+        <Tag color={v === 'password' ? 'blue' : v === 'ssh_key' ? 'purple' : 'cyan'}>
+          {v === 'password' ? t('credential.userPass')
+            : v === 'ssh_key' ? t('credential.sshKey')
+            : t('credential.apiToken')}
         </Tag>
       ),
     },
@@ -115,7 +119,8 @@ export default function Credentials() {
         <>
           {r.has_password && <Tag color="green">{t('credential.passwordEncrypted')}</Tag>}
           {r.has_private_key && <Tag color="green">{t('credential.keyEncrypted')}</Tag>}
-          {!r.has_password && !r.has_private_key && <Tag color="default">—</Tag>}
+          {(r as any).has_api_token && <Tag color="green">{t('credential.tokenEncrypted')}</Tag>}
+          {!r.has_password && !r.has_private_key && !(r as any).has_api_token && <Tag color="default">—</Tag>}
         </>
       ),
     },
@@ -203,11 +208,21 @@ export default function Credentials() {
           </Form.Item>
           <Form.Item name="auth_type" label={t('credential.authMethod')} rules={[{ required: true }]}>
             <Select
-              onChange={() => form.resetFields(['password', 'private_key', 'passphrase'])}
+              onChange={() => form.resetFields(['password', 'private_key', 'passphrase', 'api_token'])}
               placeholder={t('credential.selectAuthMethod')}
             >
-              <Option value="password">{t('credential.userPass')}</Option>
-              <Option value="ssh_key">{t('credential.sshKey')}</Option>
+              <Option value="password">
+                <div>{t('credential.userPass')}</div>
+                <div style={{ fontSize: 11, color: '#999' }}>{t('credential.userPassDesc')}</div>
+              </Option>
+              <Option value="ssh_key">
+                <div>{t('credential.sshKey')}</div>
+                <div style={{ fontSize: 11, color: '#999' }}>{t('credential.sshKeyDesc')}</div>
+              </Option>
+              <Option value="api_token">
+                <div>{t('credential.apiToken')}</div>
+                <div style={{ fontSize: 11, color: '#999' }}>{t('credential.apiTokenDesc')}</div>
+              </Option>
             </Select>
           </Form.Item>
           <Form.Item name="username" label={t('credential.loginUsername')} rules={[{ required: true, message: t('credential.enterUsername') }]}>
@@ -234,6 +249,19 @@ export default function Credentials() {
                     rules={editCred ? [] : [{ required: true, message: t('credential.enterPassword') }]}
                   >
                     <Input.Password placeholder={editCred?.has_password ? t('credential.newPasswordPlaceholder') : t('credential.passwordPlaceholder')} />
+                  </Form.Item>
+                )
+              }
+
+              if (authType === 'api_token') {
+                return (
+                  <Form.Item
+                    name="api_token"
+                    label={editCred?.has_api_token ? t('credential.newToken') : t('credential.apiToken')}
+                    rules={editCred ? [] : [{ required: true, message: t('credential.enterToken') }]}
+                    extra={editCred?.has_api_token ? t('credential.tokenHintKeep') : undefined}
+                  >
+                    <Input.Password placeholder={t('credential.tokenPlaceholder')} />
                   </Form.Item>
                 )
               }

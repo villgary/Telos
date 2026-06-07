@@ -37,12 +37,21 @@ async def create_credential(
         password_enc = encryption.encrypt(cred_in.password)
         private_key_enc = None
         passphrase_enc = None
+        api_token_enc = None
+    elif cred_in.auth_type == models.AuthType.api_token:
+        if not cred_in.api_token:
+            raise HTTPException(status_code=400, detail="API token 不能为空")
+        password_enc = None
+        private_key_enc = None
+        passphrase_enc = None
+        api_token_enc = encryption.encrypt(cred_in.api_token)
     else:
         if not cred_in.private_key:
             raise HTTPException(status_code=400, detail="SSH 私钥不能为空")
         password_enc = None
         private_key_enc = encryption.encrypt(cred_in.private_key)
         passphrase_enc = encryption.encrypt(cred_in.passphrase) if cred_in.passphrase else None
+        api_token_enc = None
 
     cred = models.Credential(
         name=cred_in.name,
@@ -51,6 +60,7 @@ async def create_credential(
         password_enc=password_enc,
         private_key_enc=private_key_enc,
         passphrase_enc=passphrase_enc,
+        api_token_enc=api_token_enc,
         created_by=user.id,
     )
     db.add(cred)
@@ -99,6 +109,8 @@ async def update_credential(
         cred.private_key_enc = encryption.encrypt(update_in.private_key)
     if update_in.passphrase is not None:
         cred.passphrase_enc = encryption.encrypt(update_in.passphrase)
+    if update_in.api_token is not None:
+        cred.api_token_enc = encryption.encrypt(update_in.api_token)
 
     db.commit()
     db.refresh(cred)

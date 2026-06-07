@@ -293,7 +293,7 @@ async def import_assets_csv(
             password = row.get('password', '').strip()
             if username and password:
                 auth_type_str = row.get('auth_type', '').strip().lower()
-                auth_type = models.AuthType.key if auth_type_str == 'key' else models.AuthType.password
+                auth_type = models.AuthType.ssh_key if auth_type_str == 'key' else models.AuthType.password
 
                 # Create credential name: auto-{ip}-{port}-{timestamp}
                 import time

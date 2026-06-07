@@ -55,6 +55,7 @@ class Credential(Base):
     password_enc = Column(Text, nullable=True)
     private_key_enc = Column(Text, nullable=True)
     passphrase_enc = Column(Text, nullable=True)
+    api_token_enc = Column(Text, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
