@@ -159,17 +159,18 @@ def test_sync_success_path_writes_agents_and_audit(client):
                  agent_name="c1 / Prod / k1",
                  api_key_fingerprint="1234567890abcdef"),
     ]
-    # Plan-bug fix: test_auth.py deletes all backend.* modules from sys.modules
-    # at import time, so patching via string path or inspect.getmodule hits
-    # the wrong module object. The router function looks up cloud_discover
-    # in its __globals__ at call time — patch that dict directly.
-    # sync_connection delegates to _run_sync, which is where the lookup happens.
+    # The router endpoint captures run_connection_sync at module-load time.
+    # Other test files (notably test_migration_023.py) reload backend.*
+    # modules, so a fresh import here may bind to a different module
+    # object than the one the router holds. Look up the function through
+    # the router endpoint's __globals__ — that's the dict the live
+    # function actually consults — and patch cloud_discover in it.
     _run_sync_func = None
     for _route in app.routes:
         if hasattr(_route, "endpoint") and _route.endpoint.__name__ == "sync_connection":
-            _run_sync_func = _route.endpoint.__globals__["_run_sync"]
+            _run_sync_func = _route.endpoint.__globals__["run_connection_sync"]
             break
-    assert _run_sync_func is not None, "could not locate _run_sync in router globals"
+    assert _run_sync_func is not None, "could not locate run_connection_sync in router globals"
     _original_discover = _run_sync_func.__globals__["cloud_discover"]
     _run_sync_func.__globals__["cloud_discover"] = lambda conn: fake_raws
     try:

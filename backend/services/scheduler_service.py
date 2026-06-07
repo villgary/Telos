@@ -12,10 +12,7 @@ from apscheduler.triggers.cron import CronTrigger
 from backend.database import SessionLocal
 from backend import models
 from backend.services import alert_service
-from backend.services.cloud_discovery import discover as cloud_discover
-from backend.services.cloud_discovery.base import (
-    FatalDiscoveryError, RetryableError,
-)
+from backend.services.cloud_discovery.sync import run_connection_sync
 from backend.services.diff_engine import compute_diff
 
 logger = logging.getLogger(__name__)
@@ -234,7 +231,6 @@ def _sync_all_cloud_connections():
 
     Called every 6h by the scheduler.
     """
-    from backend.services.ai_agent_scanner import ingest_cloud_agents
     db = SessionLocal()
     try:
         connections = db.query(models.CloudConnection).all()
@@ -243,27 +239,7 @@ def _sync_all_cloud_connections():
                 conn.last_sync_started_at = datetime.now(timezone.utc)
                 conn.last_sync_status = "running"
                 db.commit()
-
-                try:
-                    raws = cloud_discover(conn)
-                except FatalDiscoveryError as e:
-                    conn.last_sync_at = datetime.now(timezone.utc)
-                    conn.last_sync_status = "failed"
-                    conn.last_sync_error = f"auth_failed: {e}"[:256]
-                    db.commit()
-                    continue
-                except RetryableError as e:
-                    conn.last_sync_at = datetime.now(timezone.utc)
-                    conn.last_sync_status = "failed"
-                    conn.last_sync_error = f"rate_limited_or_transient: {e}"[:256]
-                    db.commit()
-                    continue
-
-                ingest_cloud_agents(db, conn, raws)
-
-                conn.last_sync_at = datetime.now(timezone.utc)
-                conn.last_sync_status = "success"
-                conn.last_sync_error = None
+                run_connection_sync(db, conn)
                 db.commit()
             except Exception as e:
                 logger.warning(

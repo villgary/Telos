@@ -3,21 +3,16 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend import models, auth, schemas
+from backend import models, auth
 from backend.database import get_db
 from backend.schemas import cloud_connections as cloud_schemas
 from backend.services import crypto
-from backend.services.cloud_discovery import discover as cloud_discover
-from backend.services.cloud_discovery.base import (
-    FatalDiscoveryError, RetryableError,
-)
-from backend.services.ai_agent_scanner import ingest_cloud_agents
+from backend.services.cloud_discovery.sync import run_connection_sync
 
 
 logger = logging.getLogger(__name__)
@@ -46,65 +41,6 @@ def _write_audit(
         note=note,
     )
     db.add(entry)
-
-
-def _run_sync(db: Session, connection: models.CloudConnection) -> dict:
-    """Run a single sync for one connection. Returns a result dict.
-
-    Updates connection.last_sync_at/status/error in place. Caller commits.
-    """
-    connection.last_sync_started_at = datetime.utcnow()
-    connection.last_sync_status = "running"
-    db.flush()
-
-    agents_discovered = 0
-    agents_updated = 0
-    error_msg: str | None = None
-    status_val = "success"
-
-    try:
-        raws = cloud_discover(connection)
-    except FatalDiscoveryError as e:
-        status_val = "failed"
-        error_msg = f"auth_failed: {e}"
-        return {
-            "status": status_val, "agents_discovered": 0, "agents_updated": 0,
-            "error": error_msg,
-        }
-    except RetryableError as e:
-        status_val = "failed"
-        error_msg = f"rate_limited_or_transient: {e}"
-        return {
-            "status": status_val, "agents_discovered": 0, "agents_updated": 0,
-            "error": error_msg,
-        }
-    except Exception as e:
-        logger.exception("Cloud discovery unexpected error")
-        status_val = "failed"
-        error_msg = f"unexpected: {e!r}"
-        return {
-            "status": status_val, "agents_discovered": 0, "agents_updated": 0,
-            "error": error_msg,
-        }
-
-    # Ingest; track discovered vs updated
-    pre_existing_ids = {
-        row[0] for row in db.query(models.AIAgent.id)
-        .filter(models.AIAgent.connection_id == connection.id).all()
-    }
-    ingested = ingest_cloud_agents(db, connection, raws)
-    for a in ingested:
-        if a.id in pre_existing_ids:
-            agents_updated += 1
-        else:
-            agents_discovered += 1
-
-    return {
-        "status": status_val,
-        "agents_discovered": agents_discovered,
-        "agents_updated": agents_updated,
-        "error": None,
-    }
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────
@@ -235,19 +171,17 @@ async def sync_connection(
         raise HTTPException(status_code=409, detail="sync already in progress")
 
     _write_audit(db, conn.id, user.id, "sync_started")
+    conn.last_sync_started_at = datetime.utcnow()
     db.commit()
 
-    result = _run_sync(db, conn)
+    result = run_connection_sync(db, conn)
+    db.commit()
+    db.refresh(conn)
 
-    # Truncate error to fit 256 chars
-    err_truncated = (result["error"][:256] if result["error"] else None)
-    conn.last_sync_at = datetime.utcnow()
-    conn.last_sync_status = result["status"]
-    conn.last_sync_error = err_truncated
+    err_truncated = result["error"]
     _write_audit(db, conn.id, user.id, "sync_finished",
                  status_val=result["status"], note=err_truncated)
     db.commit()
-    db.refresh(conn)
     return cloud_schemas.CloudConnectionSyncResponse(
         connection_id=conn.id,
         status=result["status"],

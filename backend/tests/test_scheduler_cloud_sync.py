@@ -63,7 +63,7 @@ def test_fans_out_per_connection(db):
     # in `finally`; bind to the same in-memory engine so the fixture's
     # session still sees writes.
     SchedSession = sessionmaker(bind=db.get_bind())
-    with patch.object(sched, "cloud_discover", return_value=[]), \
+    with patch("backend.services.cloud_discovery.sync.cloud_discover", return_value=[]), \
          patch.object(sched, "SessionLocal", SchedSession):
         sched._sync_all_cloud_connections()
 
@@ -88,7 +88,8 @@ def test_one_failure_does_not_block_others(db):
                          api_key_fingerprint="1234567890abcdef")]
 
     SchedSession = sessionmaker(bind=db.get_bind())
-    with patch.object(sched, "cloud_discover", side_effect=fake_discover), \
+    with patch("backend.services.cloud_discovery.sync.cloud_discover",
+               side_effect=fake_discover), \
          patch.object(sched, "SessionLocal", SchedSession):
         sched._sync_all_cloud_connections()  # must not raise
 
