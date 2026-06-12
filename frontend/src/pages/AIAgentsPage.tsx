@@ -112,14 +112,20 @@ export default function AIAgentsPage() {
           >
             {t('aiAgent.discovery.title')}
           </Button>
-          <Button
-            type="primary"
-            icon={<ScanOutlined />}
-            loading={scanning}
-            onClick={onScan}
+          <Tooltip
+            title={t('aiAgent.scanHelp')}
+            placement="bottomRight"
+            overlayStyle={{ maxWidth: 420 }}
           >
-            {t('aiAgent.scan')}
-          </Button>
+            <Button
+              type="primary"
+              icon={<ScanOutlined />}
+              loading={scanning}
+              onClick={onScan}
+            >
+              {t('aiAgent.scan')}
+            </Button>
+          </Tooltip>
         </Space>
       </div>
 

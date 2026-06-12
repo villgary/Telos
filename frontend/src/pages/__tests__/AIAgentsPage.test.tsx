@@ -76,4 +76,20 @@ describe('AIAgentsPage', () => {
       expect(screen.getByText('TestAgent')).toBeInTheDocument()
     })
   })
+
+  it('scan button is labelled "Re-parse for AI Agents" (not "Scan")', async () => {
+    mockListAIAgents.mockResolvedValue({ data: { agents: [] } })
+    mockGetAIAgentsStats.mockResolvedValue({ data: baseStats })
+
+    render(
+      <MemoryRouter>
+        <AIAgentsPage />
+      </MemoryRouter>
+    )
+
+    // The button is in the header; new label makes it clear it re-parses
+    // existing scan data, doesn't start a new scan.
+    const btn = await screen.findByRole('button', { name: /re-parse for ai agents/i })
+    expect(btn).toBeInTheDocument()
+  })
 })
