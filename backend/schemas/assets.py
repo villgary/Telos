@@ -1,7 +1,8 @@
 """Asset-related Pydantic schemas."""
+import ipaddress
 from datetime import datetime
 from typing import Optional, List, Any, TYPE_CHECKING
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from backend.models._enums import AssetCategory, AssetRelationType, AssetStatus, DirectoryType, CloudProviderType, SubTypeKind
 
@@ -121,8 +122,38 @@ class AssetBase(BaseModel):
     base_dn: Optional[str] = Field(None, max_length=256)
     use_ssl: bool = True
     group_id: Optional[int] = None
-    port: int = 22
+    port: int = Field(22, ge=1, le=65535, description="TCP/UDP port 1-65535")
     credential_id: int
+
+    @field_validator("ip")
+    @classmethod
+    def _validate_ip(cls, v: str) -> str:
+        """Reject malformed IPs early. Accepts IPv4 and IPv6."""
+        if not v or not v.strip():
+            raise ValueError("IP address is required")
+        try:
+            ipaddress.ip_address(v.strip())
+        except ValueError:
+            raise ValueError(f"'{v}' is not a valid IPv4 or IPv6 address")
+        return v.strip()
+
+    @field_validator("hostname")
+    @classmethod
+    def _validate_hostname(cls, v: Optional[str]) -> Optional[str]:
+        """Reject obvious garbage: spaces, slashes, control chars. The
+        full DNS spec is more permissive, but for a single host label
+        this is enough to catch typos like '192.168 1.8'."""
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            return None
+        if any(c in v for c in " \t\r\n/"):
+            raise ValueError(
+                f"hostname '{v}' contains spaces or slashes; "
+                "leave blank or use a single label"
+            )
+        return v
 
 
 class AssetCreate(AssetBase):

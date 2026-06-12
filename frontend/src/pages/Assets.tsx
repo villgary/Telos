@@ -714,10 +714,30 @@ export default function Assets() {
           </>
         )}
         <Form form={form} layout="vertical">
-          <Form.Item name="ip" label={t('asset.ipAddress')} rules={[{ required: true, message: t('asset.enterIp') }]}>
+          <Form.Item
+            name="ip"
+            label={t('asset.ipAddress')}
+            rules={[
+              { required: true, message: t('asset.enterIp') },
+              {
+                pattern: /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)|(?:[0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}$/,
+                message: t('asset.invalidIp'),
+              },
+            ]}
+          >
             <Input placeholder="192.168.1.100" disabled={!!editAsset} />
           </Form.Item>
-          <Form.Item name="hostname" label={t('asset.hostnameOptional')}>
+          <Form.Item
+            name="hostname"
+            label={t('asset.hostnameOptional')}
+            rules={[
+              {
+                // Allow empty, otherwise single DNS label or FQDN
+                pattern: /^$|^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/,
+                message: t('asset.invalidHostname'),
+              },
+            ]}
+          >
             <Input placeholder="web-prod-01" />
           </Form.Item>
 
@@ -853,7 +873,13 @@ export default function Assets() {
               ))}
             </Select>
           </Form.Item>
-          <Form.Item name="port" label={t('asset.portOptional')}>
+          <Form.Item
+            name="port"
+            label={t('asset.portOptional')}
+            rules={[
+              { type: 'integer', min: 1, max: 65535, message: t('asset.invalidPort') },
+            ]}
+          >
             <Input type="number" placeholder={t('asset.defaultPortHint')} />
           </Form.Item>
           <Form.Item name="credential_id" label={t('asset.credential')} rules={[{ required: true, message: t('asset.selectCredential') }]}>
